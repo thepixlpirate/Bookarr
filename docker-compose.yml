@@ -1,0 +1,12 @@
+services:
+  bookarr:
+    build: .
+    container_name: bookarr
+    ports: ["8787:8787"]
+    volumes:
+      - ./config:/config
+      - /mnt/disks/SERVER/Comics:/comics
+      - /mnt/disks/SERVER/Books:/books
+      - /mnt/disks/SERVER/Audiobooks:/audiobooks
+      - /mnt/disks/SERVER/Downloads:/downloads
+    restart: unless-stopped
