@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>bookarr</Name>
+  <Repository>ghcr.io/YOUR_GITHUB_USER/bookarr:latest</Repository>
+  <Registry>https://github.com/YOUR_GITHUB_USER/bookarr/pkgs/container/bookarr</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/YOUR_GITHUB_USER/bookarr</Support>
+  <Overview>Download, organize and serve comics, ebooks and audiobooks. Uses Prowlarr, SABnzbd or qBittorrent, and serves an OPDS feed to reader apps.</Overview>
+  <Category>MediaApp:Books Downloaders:</Category>
+  <WebUI>http://[IP]:[PORT:8787]/</WebUI>
+  <Config Name="WebUI Port" Target="8787" Default="8787" Mode="tcp" Description="Web UI, API and OPDS" Type="Port" Display="always" Required="true" Mask="false">8787</Config>
+  <Config Name="Config" Target="/config" Default="/mnt/user/appdata/bookarr" Mode="rw" Description="Database, covers, backups" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/bookarr</Config>
+  <Config Name="Comics" Target="/comics" Default="/mnt/user/media/comics" Mode="rw" Description="Comics library" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/media/comics</Config>
+  <Config Name="Ebooks" Target="/books" Default="/mnt/user/media/books" Mode="rw" Description="Ebook library" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/media/books</Config>
+  <Config Name="Audiobooks" Target="/audiobooks" Default="/mnt/user/media/audiobooks" Mode="rw" Description="Audiobook library" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/media/audiobooks</Config>
+  <Config Name="Downloads" Target="/downloads" Default="/mnt/user/downloads" Mode="rw" Description="Same share your download clients write to" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/downloads</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User ID for file ownership (Unraid: 99)" Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group ID for file ownership (Unraid: 100)" Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+</Container>

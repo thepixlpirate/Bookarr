@@ -1,0 +1,151 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bookarr</title><meta name="color-scheme" content="dark"><script src="/initialize.js"></script>
+<style>
+:root{color-scheme:dark;--black:#0a0a0f;--ink:#111118;--g1:#1a1b23;--g2:#23252f;--line:#2c2f3b;--tx:#e7e8ee;--mu:#8d90a0;--pu:#8b5cf6;--te:#2dd4bf;--bl:#4f9dff}
+*{box-sizing:border-box}body{margin:0;background:var(--ink);color:var(--tx);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;height:100vh}
+nav{width:210px;flex:none;background:var(--black);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:12px 0;overflow:auto}
+.logo{display:flex;gap:10px;align-items:center;font-size:18px;font-weight:700;padding:4px 18px 18px}
+nav a{display:block;padding:9px 18px;color:var(--mu);cursor:pointer;border-left:3px solid transparent}nav a:hover{color:var(--tx);background:var(--g1)}
+nav a.on{color:var(--tx);background:var(--g1);border-left-color:var(--pu)}nav hr{border:0;border-top:1px solid var(--line);margin:10px 0;width:100%}
+.col{flex:1;display:flex;flex-direction:column;min-width:0}
+header{background:var(--g1);border-bottom:1px solid var(--line);padding:10px 24px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+header h1{font-size:18px;margin:0 8px 0 0;font-weight:600}header .sp{flex:1}
+input,select,button{background:var(--g2);color:var(--tx);border:1px solid var(--line);border-radius:4px;padding:7px 10px;font:inherit}
+input::placeholder{color:#666a7a}button{cursor:pointer}button:hover{border-color:#464a5b}button.p{background:var(--te);border-color:var(--te);color:#04201c;font-weight:600}
+button.pu{background:var(--pu);border-color:var(--pu);color:#fff}button.dg{color:#f08aa0}:focus-visible{outline:2px solid var(--bl);outline-offset:1px}
+header input[type=search]{width:min(320px,100%)}label.ck{color:var(--mu);display:flex;gap:5px;align-items:center;cursor:pointer}label.ck input{accent-color:var(--pu)}
+main{flex:1;overflow:auto;padding:24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:20px}
+.pc{cursor:pointer}.pc b{display:block;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pc small{display:block;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.po{position:relative;aspect-ratio:2/3;background:linear-gradient(160deg,var(--g2),var(--g1));border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.po img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.po .ph{position:absolute;inset:0;display:grid;place-items:center;font-size:34px;font-weight:700;color:#3a3d4d}
+.po .tag{position:absolute;top:6px;left:6px;background:#000a;color:#fff;font-size:11px;padding:1px 7px;border-radius:3px}
+.po .bar{position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--line)}
+.have .bar{background:var(--te)}.want .bar{background:var(--bl)}.miss .bar{background:var(--pu)}.pc:hover .po,.pc:focus-visible .po{border-color:var(--pu)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}th{color:var(--mu);font-weight:500}tr:hover td{background:var(--g1)}
+.empty{color:var(--mu);padding:48px 0;text-align:center}.mu{color:var(--mu)}h2{margin:0 0 8px}
+.tabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--line);flex-wrap:wrap}.tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;color:var(--mu);padding:9px 14px}
+.tabs button.on{color:var(--tx);border-bottom-color:var(--te)}
+.f{display:grid;grid-template-columns:200px minmax(0,1fr);gap:10px 16px;max-width:640px;margin-bottom:18px;align-items:center}
+.ov{position:fixed;inset:0;background:#000b;display:grid;place-items:center;padding:16px;z-index:9}
+.md{background:var(--g1);border:1px solid var(--line);border-radius:6px;width:min(900px,100%);max-height:92vh;overflow:auto;padding:22px}
+.mh{display:grid;grid-template-columns:170px 1fr;gap:22px}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.md .x{float:right}
+a.l{color:var(--bl)}.msg{color:var(--te);margin-left:10px}
+@media(max-width:760px){body{flex-direction:column}nav{width:100%;flex-direction:row;overflow:auto;padding:0}.logo,nav hr{display:none}nav a{border-left:0;border-bottom:3px solid transparent;white-space:nowrap}nav a.on{border-bottom-color:var(--pu)}.mh{grid-template-columns:1fr}.f{grid-template-columns:1fr}main{padding:14px}}
+</style></head><body>
+<nav id="nav"></nav>
+<div class="col"><header id="hd"></header><main id="m"></main></div>
+<script>
+const KEY=BOOKARR.apiKey,H={'X-Api-Key':KEY,'Content-Type':'application/json'};
+const api=(p,o={})=>fetch('/api/v1/'+p,{headers:H,...o}).then(async r=>{if(!r.ok)throw new Error((await r.json().catch(()=>({}))).detail||r.statusText);return r.json()});
+const send=(p,m,b)=>api(p,{method:m,body:b?JSON.stringify(b):undefined});
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const NAV=[['main','Library'],['comic','Comics'],['ebook','Ebooks'],['audiobook','Audiobooks'],['series','Series'],['calendar','Calendar'],'-',['wanted','Wanted'],['activity','Activity'],'-',['system','System'],['settings','Settings']];
+const TITLE={main:'Library',comic:'Comics',ebook:'Ebooks',audiobook:'Audiobooks',series:'Series',calendar:'Calendar',wanted:'Wanted',activity:'Activity',system:'System',settings:'Settings'};
+let view='main',term='',sub='clients',types={comic:1,ebook:1,audiobook:1},REG=[];
+const LOGO='<svg width="26" height="26" viewBox="0 0 26 26"><rect width="26" height="26" rx="6" fill="#8b5cf6"/><path d="M7 6h9a3 3 0 013 3v11H10a3 3 0 01-3-3z" fill="none" stroke="#2dd4bf" stroke-width="2"/><path d="M11 11h5" stroke="#fff" stroke-width="2"/></svg>';
+function chrome(){$('#nav').innerHTML=`<div class="logo">${LOGO}Bookarr</div>`+NAV.map(n=>n=='-'?'<hr>':`<a tabindex=0 class="${view==n[0]?'on':''}" data-k="${n[0]}">${n[1]}</a>`).join('');
+ document.querySelectorAll('nav a').forEach(a=>{a.onclick=()=>{view=a.dataset.k;term='';go()};a.onkeydown=e=>e.key=='Enter'&&a.click()});
+ $('#hd').innerHTML=`<h1>${TITLE[view]}</h1><span class="sp"></span><input type="search" id="q" placeholder="Search for a title, e.g. Deadpool" value="${esc(term)}">
+ ${Object.keys(types).map(t=>`<label class="ck"><input type="checkbox" data-t="${t}" ${types[t]?'checked':''}>${t=='comic'?'Comics':t=='ebook'?'Ebooks':'Audiobooks'}</label>`).join('')}<button class="p" id="go">Search</button>`;
+ const run=()=>{term=$('#q').value.trim();go()};$('#go').onclick=run;$('#q').onkeydown=e=>e.key=='Enter'&&run();
+ document.querySelectorAll('[data-t]').forEach(c=>c.onchange=()=>types[c.dataset.t]=c.checked?1:0)}
+const st=i=>i.status=='downloaded'?'have':i.status=='wanted'?'want':i.monitored?'miss':'off';
+function poster(i,src){const k=REG.push(i)-1;return `<div class="pc ${st(i)}" tabindex=0 data-i="${k}"><div class="po">${src?`<img loading=lazy src="${esc(src)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc((i.title||'?').slice(0,2))}</span><span class="tag">${i.type}</span><i class="bar"></i></div><b>${esc(i.title)}</b><small>${esc([i.author||i.series,i.year].filter(Boolean).join(', '))}</small></div>`}
+function bindPosters(){document.querySelectorAll('.pc').forEach(p=>{p.onclick=()=>{const i=REG[p.dataset.i];i._s?seriesModal(i):modal(i)};p.onkeydown=e=>e.key=='Enter'&&p.click()})}
+async function go(){chrome();REG=[];const m=$('#m');m.innerHTML='<div class="empty">Loading…</div>';
+ try{if(view=='settings')return await settings(m);
+  if(view=='series')return await seriesView(m);if(view=='calendar')return await calView(m);if(view=='system')return await systemView(m);
+  if(view=='activity'){const [q,hs]=await Promise.all([api('queue'),api('history')]);
+   m.innerHTML=`<div class="acts"><button class="p" id="chk">Check downloads now</button><span class="msg" id="msg"></span></div><h3>Queue</h3>`+(q.length?'<table><tr><th>Title<th>Status<th>Progress<th>Client</tr>'+q.map(x=>`<tr><td>${esc(x.title)}<td>${esc(x.status)}<td>${x.progress}%<td>${esc(x.client)}</tr>`).join('')+'</table>':'<div class="mu">Nothing downloading.</div>')+
+   '<h3>History</h3>'+(hs.length?'<table><tr><th>Release<th>Type<th>Status<th>Date</tr>'+hs.map(x=>`<tr><td>${esc(x.title)}<td>${x.type}<td>${x.state=='sent'?'Downloading':x.state}${x.note?' ('+esc(x.note)+')':''}<td>${esc(x.created)}</tr>`).join('')+'</table>':'<div class="mu">No downloads yet.</div>');
+   $('#chk').onclick=async()=>{$('#msg').textContent='Checking…';await send('command/checkdownloads','POST');go()};return}
+  if(term){const r=await api('lookup?term='+encodeURIComponent(term)+'&types='+Object.keys(types).filter(k=>types[k]&&(view=='main'||view==k||view=='wanted')).join(','));
+   m.innerHTML=r.length?`<div class="grid">${r.map(i=>poster(i,i.cover)).join('')}</div>`:'<div class="empty">No matches. Try fewer keywords, or check the metadata keys in Settings.</div>';return bindPosters()}
+  const it=view=='wanted'?await api('wanted/missing'):await api('item'+(['comic','ebook','audiobook'].includes(view)?'?type='+view:''));
+  m.innerHTML=it.length?`<div class="grid">${it.map(i=>poster(i,'/api/v1/cover/'+i.id+'?apikey='+KEY)).join('')}</div>`:'<div class="empty">Nothing here yet. Search for a title above to add it, or scan your folders in Settings > Library.</div>';bindPosters()
+ }catch(e){m.innerHTML=`<div class="empty">${esc(e.message)}</div>`}}
+function modal(i){const lib=!!i.id,d=document.createElement('div');d.className='ov';
+ const src=lib?'/api/v1/cover/'+i.id+'?apikey='+KEY:i.cover;
+ d.innerHTML=`<div class="md"><button class="x">Close</button><div class="mh"><div class="po">${src?`<img src="${esc(src)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc((i.title||'?').slice(0,2))}</span></div>
+ <div><h2>${esc(i.title)}</h2><p class="mu">${esc([i.type,i.author,i.series,i.publisher,i.year].filter(Boolean).join(', '))}</p><p>${esc(i.description||'No description yet.')}</p>
+ <div class="acts">${lib?`<label class="ck"><input type="checkbox" id="mon" ${i.monitored?'checked':''}>Monitored</label><button class="p" id="rel">Search releases</button><button id="ref">Refresh metadata</button>${libExtra(i)}<button class="dg" id="del">Delete</button>`
+ :`${addButtons(i)}<button class="p" id="rel">Search releases</button>`}<span class="msg" id="msg"></span></div></div></div><div id="out"></div></div>`;
+ document.body.appendChild(d);const close=()=>d.remove();d.querySelector('.x').onclick=close;d.onclick=e=>e.target==d&&close();
+ const msg=t=>d.querySelector('#msg').textContent=t;
+ d.querySelector('#rel').onclick=async()=>{const o=d.querySelector('#out');o.innerHTML='<div class="empty">Searching indexers…</div>';try{const r=await api('search?term='+encodeURIComponent(i.title)+'&types='+i.type);
+  o.innerHTML=r.length?'<table><tr><th>Release<th>Indexer<th>Size<th>Seeds<th></tr>'+r.map((x,n)=>`<tr><td>${esc(x.title)}<td>${esc(x.indexer)}<td>${(x.size/1048576).toFixed(0)} MB<td>${x.seeders??'-'}<td><button data-g="${n}">Download</button></tr>`).join('')+'</table>':'<div class="empty">No releases found.</div>';
+  o.querySelectorAll('[data-g]').forEach(b=>b.onclick=async()=>{try{await send('release','POST',{...r[b.dataset.g],item_id:i.id});b.textContent='Sent'}catch(e){msg(e.message)}})}catch(e){o.innerHTML=`<div class="empty">${esc(e.message)}</div>`}};
+ if(lib){d.querySelector('#mon').onchange=e=>send('item/'+i.id,'PUT',{monitored:e.target.checked?1:0});
+  wireLib(d,i,msg);d.querySelector('#ref').onclick=async()=>{msg('Refreshing…');try{await send('item/'+i.id+'/refresh','POST');close();go()}catch(e){msg(e.message)}};
+  d.querySelector('#del').onclick=async()=>{if(confirm('Remove "'+i.title+'" from Bookarr? Files on disk are not deleted.')){await send('item/'+i.id+'?deleteFile='+(i.path&&confirm('Also delete the file from disk?')?1:0),'DELETE');close();go()}}}
+ else wireAdd(d,i,msg,close)}
+const FORMS={general:[['logLevel','Log level']],indexer:[['prowlarrUrl','Prowlarr URL'],['prowlarrKey','Prowlarr API key']],
+ library:[['comic','Comics folder'],['ebook','Ebooks folder'],['audiobook','Audiobooks folder'],['downloads','Downloads folder']],
+ media:[['autoSearchMinutes','Search every (minutes)'],['minSeeders','Minimum seeders'],['importMode','Import mode (auto, move, copy, hardlink)'],['remotePath','Download path as the client sees it'],['localPath','Same folder as Bookarr sees it']],
+ metadata:[['comicvineKey','ComicVine API key'],['googleBooksKey','Google Books API key (optional)'],['audibleRegion','Audible region (com, co.uk, de...)'],['writeTags','Write tags into files after import (1 or 0)']],
+ quality:[['comic','Comic formats, best first'],['ebook','Ebook formats, best first'],['audiobook','Audiobook formats, best first'],['comicMaxMB','Comic max size (MB, 0 = no limit)'],['ebookMaxMB','Ebook max size (MB)'],['audiobookMaxMB','Audiobook max size (MB)'],['requirePreferred','Only accept preferred formats (1 or 0)']],
+ notifications:[['onGrab','Notify on grab (1 or 0)'],['onImport','Notify on import (1 or 0)'],['onFail','Notify on failure (1 or 0)'],['discordWebhook','Discord webhook URL'],['pushoverUser','Pushover user key'],['pushoverToken','Pushover app token'],['telegramToken','Telegram bot token'],['telegramChat','Telegram chat ID'],['webhookUrl','Generic webhook URL']],
+ email:[['smtpHost','SMTP server'],['smtpPort','SMTP port'],['user','SMTP username'],['password','SMTP password'],['from','From address'],['kindleAddress','Send-to-Kindle address']],
+ security:[['authMode','Authentication (none or basic)'],['username','Username'],['password','Password']]};
+const SUBS=[['clients','Download clients'],['indexer','Indexers'],['quality','Quality'],['metadata','Metadata'],['notifications','Notifications'],['email','Email'],['library','Library'],['media','Media'],['security','Security'],['devices','Reader devices'],['general','General'],['logs','Logs']];
+async function settings(m){m.innerHTML=`<div class="tabs">${SUBS.map(([k,l])=>`<button class="${sub==k?'on':''}" data-s="${k}">${l}</button>`).join('')}</div><div id="out"></div>`;
+ document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{sub=b.dataset.s;go()});const o=$('#out');
+ if(sub=='logs'){const l=await api('log');o.innerHTML='<table>'+l.map(x=>`<tr><td>${esc(x.time)}<td>${x.level}<td>${esc(x.message)}</tr>`).join('')+'</table>';return}
+ if(sub=='devices')return await devicesView(o);
+ if(sub=='clients'){const c=await api('downloadclient');o.innerHTML=(c.length?'<table>'+c.map(x=>`<tr><td>${esc(x.name)}<td>${x.kind}<td>${esc(x.url)}<td><button class="dg" data-d="${x.id}">Remove</button></tr>`).join('')+'</table>':'<div class="empty">No download clients yet.</div>')+
+  `<h3>Add download client</h3><div class="f"><span>Name</span><input id=n><span>Type</span><select id=k><option>sabnzbd<option>qbittorrent</select><span>URL</span><input id=u placeholder="http://your-server-ip:8080"><span>API key (SABnzbd)</span><input id=a><span>Username (qBittorrent)</span><input id=us><span>Password (qBittorrent)</span><input id=pw type=password><span>Category</span><input id=c placeholder="books"></div><button class="p" id=add>Add client</button>`;
+  document.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{await send('downloadclient/'+b.dataset.d,'DELETE');go()});
+  $('#add').onclick=async()=>{await send('downloadclient','POST',{name:$('#n').value,kind:$('#k').value,url:$('#u').value,apikey:$('#a').value,username:$('#us').value,password:$('#pw').value,category:$('#c').value});go()};return}
+ const v=await api('config/'+sub);
+ o.innerHTML=(sub=='general'?`<div class="f"><span>API key</span><input readonly value="${v.apiKey}"><span>OPDS catalog</span><input readonly value="${location.origin}/opds"></div>`:'')+`<div class="f">${(FORMS[sub]||[]).map(([k,l])=>`<span>${l}</span><input data-k="${k}" value="${esc(v[k])}">`).join('')}</div><button class="p" id=save>Save changes</button>
+ ${sub=='library'?' <button id=scan>Scan library</button>':''}${sub=='metadata'?' <button id=rm>Refresh missing metadata</button>':''}${sub=='notifications'?' <button id=tn>Send test</button>':''}<span class="msg" id=msg></span>`;
+ $('#save').onclick=async()=>{const b={};document.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=isNaN(i.value)||i.value===''?i.value:+i.value);await send('config/'+sub,'PUT',b);$('#msg').textContent='Saved'};
+ if($('#scan'))$('#scan').onclick=async()=>{const r=await send('library/scan','POST');$('#msg').textContent='Added '+r.added+' items'};
+ if($('#tn'))$('#tn').onclick=async()=>{await $('#save').onclick();await send('notification/test','POST');$('#msg').textContent='Test sent'};
+ if($('#rm'))$('#rm').onclick=async()=>{$('#msg').textContent='Working…';const r=await send('metadata/refresh','POST');$('#msg').textContent='Updated '+r.updated+' of '+r.checked}}
+document.addEventListener('keydown',e=>{if(e.key=='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){e.preventDefault();$('#q')?.focus()}});
+function addButtons(i){let b='';
+ if(i.provider=='comicvine')return '<button class="pu" id="mon-s">Monitor series</button>';
+ b+='<button class="pu" id="add">Add to library</button><button id="addgo">Add and search</button>';
+ if(i.type=='audiobook'&&i.series)b+='<button id="mon-s">Monitor series</button>';
+ if(i.type=='ebook'&&i.author)b+='<button id="mon-a">Monitor author</button>';return b}
+function wireAdd(d,i,msg,close){const q=s=>d.querySelector(s);
+ const addSeries=async x=>{msg('Adding…');try{const r=await send('series','POST',{...i,...x});msg('Monitoring: '+r.added+' new items')}catch(e){msg(e.message)}};
+ if(q('#add'))q('#add').onclick=async()=>{await send('item','POST',i);msg('Added to library');q('#add').disabled=true};
+ if(q('#addgo'))q('#addgo').onclick=async()=>{msg('Searching…');try{const r=await send('item','POST',i);const g=await send('item/'+r.id+'/search','POST');msg('Sent: '+g.release)}catch(e){msg(e.message)}};
+ if(q('#mon-s'))q('#mon-s').onclick=()=>addSeries(i.provider=='comicvine'?{}:{title:i.series,ext_id:i.series});
+ if(q('#mon-a'))q('#mon-a').onclick=()=>addSeries({title:i.author,provider:'author',ext_id:i.author,cover:null,description:''})}
+const libExtra=i=>(i.path&&i.type=='ebook'?'<button id="kindle">Send to Kindle</button>':'')+(i.path?'<button id="tags">Write tags</button>':'');
+function wireLib(d,i,msg){const q=s=>d.querySelector(s);
+ if(q('#kindle'))q('#kindle').onclick=async()=>{msg('Sending…');try{await send('item/'+i.id+'/send','POST');msg('Sent to Kindle')}catch(e){msg(e.message)}};
+ if(q('#tags'))q('#tags').onclick=async()=>{try{await send('item/'+i.id+'/tags','POST');msg('Tags written')}catch(e){msg(e.message)}}}
+async function seriesView(m){const s=await api('series');
+ m.innerHTML=s.length?`<div class="grid">${s.map(x=>poster({...x,_s:1,status:x.total&&x.have>=x.total?'downloaded':x.have?'wanted':'missing',author:x.have+' of '+x.total+' downloaded'},x.cover)).join('')}</div>`:'<div class="empty">No series yet. Search for a comic or audiobook series and choose Monitor series.</div>';bindPosters()}
+async function seriesModal(s){const {series:sr,items}=await api('series/'+s.id),d=document.createElement('div');d.className='ov';
+ d.innerHTML=`<div class="md"><button class="x">Close</button><div class="mh"><div class="po">${sr.cover?`<img src="${esc(sr.cover)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc(sr.title.slice(0,2))}</span></div><div><h2>${esc(sr.title)}</h2><p class="mu">${esc([sr.type,sr.publisher,sr.year,sr.have+' of '+sr.total+' downloaded'].filter(Boolean).join(', '))}</p><p>${esc(sr.description||'')}</p>
+ <div class="acts"><label class="ck"><input type="checkbox" id="sm" ${sr.monitored?'checked':''}>Monitored</label><button class="p" id="ss">Search missing</button><button id="sf">Refresh issues</button><button class="dg" id="sd">Remove series</button><span class="msg" id="msg"></span></div></div></div>
+ <table><tr><th>#<th>Title<th>Release date<th>Status</tr>${items.map(x=>`<tr><td>${esc(x.num||'')}<td>${esc(x.title)}<td>${esc(x.release_date||'')}<td>${x.status}</tr>`).join('')}</table></div>`;
+ document.body.appendChild(d);const q=x=>d.querySelector(x),close=()=>d.remove(),msg=t=>q('#msg').textContent=t;q('.x').onclick=close;d.onclick=e=>e.target==d&&close();
+ q('#sm').onchange=e=>send('series/'+sr.id,'PUT',{monitored:e.target.checked?1:0});
+ q('#ss').onclick=async()=>{msg('Searching…');try{const r=await send('series/'+sr.id+'/search','POST');msg('Sent '+r.sent+' releases')}catch(e){msg(e.message)}};
+ q('#sf').onclick=async()=>{msg('Refreshing…');try{const r=await send('series/'+sr.id+'/refresh','POST');msg(r.added+' new items');}catch(e){msg(e.message)}};
+ q('#sd').onclick=async()=>{if(confirm('Remove "'+sr.title+'"? Downloaded files are kept.')){await send('series/'+sr.id,'DELETE');close();go()}}}
+async function calView(m){const d=n=>new Date(Date.now()+n*864e5).toISOString().slice(0,10),it=await api(`calendar?start=${d(-14)}&end=${d(90)}`),g={};
+ it.forEach(x=>(g[x.release_date]??=[]).push(x));
+ m.innerHTML=Object.keys(g).length?Object.keys(g).sort().map(k=>`<h3 class="${k>d(0)?'':'mu'}">${k}</h3><table>${g[k].map(x=>`<tr><td>${esc(x.title)}<td>${x.type}<td>${x.status}</tr>`).join('')}</table>`).join(''):'<div class="empty">No dated releases yet. Monitor a comic series to see upcoming issues here.</div>'}
+const fmt=b=>b>1e12?(b/1e12).toFixed(1)+' TB':(b/1e9).toFixed(0)+' GB';
+async function systemView(m){const [i,h,du,bk]=await Promise.all([api('system/info'),api('health'),api('duplicates'),api('system/backup')]);
+ m.innerHTML=`<h3>Health</h3><table>${h.map(x=>`<tr><td style="width:70px;color:${x.ok?'var(--te)':'var(--pu)'}">${x.ok?'OK':'Check'}<td>${esc(x.name)}<td class="mu">${esc(x.message)}</tr>`).join('')}</table>
+ <h3>Disk space</h3><table>${i.disks.map(x=>`<tr><td>${esc(x.name)}<td class="mu">${esc(x.path)}<td>${fmt(x.free)} free of ${fmt(x.total)}</tr>`).join('')}</table>
+ <h3>About</h3><p class="mu">Bookarr ${i.version}, running for ${i.uptime}. ${i.counts.comic} comics, ${i.counts.ebook} ebooks, ${i.counts.audiobook} audiobooks.</p>
+ <h3>Backups</h3><div class="acts"><button class="p" id="bk">Create backup</button></div><table>${bk.map(b=>`<tr><td>${esc(b.name)}<td>${(b.size/1024).toFixed(0)} KB<td><a class="l" href="/api/v1/system/backup/${encodeURIComponent(b.name)}?apikey=${KEY}">Download</a></tr>`).join('')}</table>
+ <h3>Duplicates</h3>`+(du.length?du.map(g=>`<table>${g.map(x=>`<tr><td>${esc(x.title)}<td class="mu">${esc(x.path)}<td><button class="dg" data-x="${x.id}">Delete file</button></tr>`).join('')}</table><br>`).join(''):'<div class="mu">No duplicates found.</div>');
+ $('#bk').onclick=async()=>{await send('system/backup','POST');go()};
+ document.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{if(confirm('Delete this file from disk and remove it from Bookarr?')){await send('item/'+b.dataset.x+'?deleteFile=1','DELETE');go()}})}
+async function devicesView(o){const d=await api('device');
+ o.innerHTML=`<p class="mu">Give each reading app its own key so you can revoke one without breaking the others.</p>`+(d.length?'<table><tr><th>Name<th>Catalog address<th>Last used<th></tr>'+d.map(x=>`<tr><td>${esc(x.name)}<td class="mu">${location.origin}/opds?apikey=${x.key}<td class="mu">${esc(x.last_used||'never')}<td><button class="dg" data-r="${x.id}">Revoke</button></tr>`).join('')+'</table>':'<div class="empty">No devices yet.</div>')+`<h3>Add device</h3><div class="f"><span>Name</span><input id=dn placeholder="Moon+ Reader on phone"></div><button class="p" id=da>Create key</button>`;
+ document.querySelectorAll('[data-r]').forEach(b=>b.onclick=async()=>{await send('device/'+b.dataset.r,'DELETE');go()});
+ $('#da').onclick=async()=>{await send('device','POST',{name:$('#dn').value});go()}}
+go();
+</script></body></html>
