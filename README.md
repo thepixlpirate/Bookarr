@@ -12,6 +12,7 @@ Comics, ebooks and audiobooks in one arr-style app: search, monitor series, down
 ## First-run checklist (Settings)
 - Indexers: Prowlarr URL and API key. Download clients: SABnzbd and/or qBittorrent.
 - Metadata: ComicVine API key (free) for comic series monitoring.
+- Folders: mount your Books share at `/books` and your downloads share at `/downloads`. Bookarr creates `Comics`, `Ebooks` and `Audiobooks` inside Books and moves finished downloads there, sorted by series or author. Give SABnzbd and qBittorrent the category `books` (the default).
 - Media: if SABnzbd sees `/data/...` but Bookarr sees `/downloads/...`, fill in the two path mapping fields.
 - System page shows anything still misconfigured.
 

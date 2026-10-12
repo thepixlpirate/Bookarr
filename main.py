@@ -35,7 +35,7 @@ TYPES = {"comic": 7030, "ebook": 7020, "audiobook": 3030}  # Newznab categories
 DEFAULTS = {
     "general": {"logLevel": "info", "apiKey": ""},
     "indexer": {"prowlarrUrl": "", "prowlarrKey": ""},
-    "library": {"comic": "/comics", "ebook": "/books", "audiobook": "/audiobooks", "downloads": "/downloads"},
+    "library": {"comic": "/books/Comics", "ebook": "/books/Ebooks", "audiobook": "/books/Audiobooks", "downloads": "/downloads"},
     "media": {"autoSearchMinutes": 60, "minSeeders": 1, "importMode": "auto", "remotePath": "", "localPath": ""},
     "metadata": {"comicvineKey": "", "googleBooksKey": "", "audibleRegion": "com", "writeTags": 1},
     "quality": {"comic": "cbz,cbr,pdf", "ebook": "epub,azw3,mobi,pdf", "audiobook": "m4b,mp3", "comicMaxMB": 500, "ebookMaxMB": 200, "audiobookMaxMB": 3000, "requirePreferred": 0},
@@ -57,6 +57,9 @@ rows = lambda q, a=(): [dict(r) for r in db.execute(q, a).fetchall()]
 
 @asynccontextmanager
 async def life(app):
+    for k in ("comic", "ebook", "audiobook", "downloads"):
+        try: os.makedirs(cfg("library")[k], exist_ok=True)
+        except OSError as e: log.warning("Could not create %s folder: %s", k, e)
     ts = [asyncio.create_task(auto_search_loop()), asyncio.create_task(import_loop()), asyncio.create_task(maint_loop())]; yield
     for t in ts: t.cancel()
 app = FastAPI(title="Bookarr", lifespan=life)
@@ -91,12 +94,41 @@ async def put_cfg(sec: str, request: Request):
 # ---------- download clients ----------
 @app.get("/api/v1/downloadclient", dependencies=API)
 def clients(): return rows("SELECT * FROM client")
+def norm_url(u):
+    u = (u or "").strip().rstrip("/")
+    return u if re.match(r"https?://", u) else "http://" + u
+async def test_client(c):
+    url = norm_url(c["url"])
+    try:
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as x:
+            if c["kind"] == "sabnzbd":
+                v = (await x.get(url + "/api", params={"mode": "version", "output": "json"})).json().get("version")
+                if not v: return {"ok": False, "message": "That address answered, but it does not look like SABnzbd."}
+                q = (await x.get(url + "/api", params={"mode": "queue", "limit": 1, "output": "json", "apikey": c.get("apikey", "")})).json()
+                if "error" in q: return {"ok": False, "message": f"Reached SABnzbd {v}, but it said: {q['error']}"}
+                return {"ok": True, "message": f"Connected to SABnzbd {v}"}
+            r = await x.post(url + "/api/v2/auth/login", data={"username": c.get("username", ""), "password": c.get("password", "")})
+            if r.status_code == 403: return {"ok": False, "message": "qBittorrent refused the login (too many failed attempts, or its Web UI blocks this address). Wait a few minutes and check its Web UI settings."}
+            if r.text.strip() != "Ok.": return {"ok": False, "message": "Reached qBittorrent, but the username or password is wrong."}
+            return {"ok": True, "message": "Connected to qBittorrent " + (await x.get(url + "/api/v2/app/version")).text}
+    except ValueError: return {"ok": False, "message": "That address answered, but not like " + ("SABnzbd" if c["kind"] == "sabnzbd" else "qBittorrent") + ". Check the port."}
+    except httpx.ConnectError: return {"ok": False, "message": f"Cannot connect to {url}. Check the address and port."}
+    except httpx.TimeoutException: return {"ok": False, "message": f"{url} did not answer in time."}
+    except Exception as e: return {"ok": False, "message": f"Failed: {e}"}
 @app.post("/api/v1/downloadclient", dependencies=API)
 async def add_client(request: Request):
-    b = await request.json()
+    b = await request.json(); b["url"] = norm_url(b["url"])
     c = db.execute("INSERT INTO client(name,kind,url,apikey,username,password,category) VALUES(?,?,?,?,?,?,?)",
-        (b.get("name"), b["kind"], b["url"].rstrip("/"), b.get("apikey", ""), b.get("username", ""), b.get("password", ""), b.get("category", ""))); db.commit()
-    return {"id": c.lastrowid}
+        (b.get("name"), b["kind"], b["url"], b.get("apikey", ""), b.get("username", ""), b.get("password", ""), b.get("category", ""))); db.commit()
+    res = await test_client(b); log.info("Added %s client %s: %s", b["kind"], b.get("name"), res["message"])
+    return {"id": c.lastrowid, **res}
+@app.post("/api/v1/downloadclient/test", dependencies=API)
+async def test_new_client(request: Request): return await test_client(await request.json())
+@app.post("/api/v1/downloadclient/{cid}/test", dependencies=API)
+async def test_saved_client(cid: int):
+    r = rows("SELECT * FROM client WHERE id=?", (cid,))
+    if not r: raise HTTPException(404)
+    return await test_client(r[0])
 @app.delete("/api/v1/downloadclient/{cid}", dependencies=API)
 def del_client(cid: int): db.execute("DELETE FROM client WHERE id=?", (cid,)); db.commit(); return {}
 
@@ -104,7 +136,7 @@ async def send_to_client(rel: dict, mtype: str, item_id: int = None):
     kind = "sabnzbd" if rel["protocol"] == "usenet" else "qbittorrent"
     c = db.execute("SELECT * FROM client WHERE kind=? AND enabled=1 LIMIT 1", (kind,)).fetchone()
     if not c: raise HTTPException(400, f"No enabled {kind} client configured")
-    cat = c["category"] or {"comic": "comics", "ebook": "books", "audiobook": "audiobooks"}[mtype]
+    cat = c["category"] or "books"
     gid = db.execute("INSERT INTO grab(item_id,type,title,protocol,client_id) VALUES(?,?,?,?,?)", (item_id, mtype, rel["title"], rel["protocol"], c["id"])).lastrowid
     try:
         async with httpx.AsyncClient(timeout=30) as x:
@@ -121,6 +153,7 @@ async def send_to_client(rel: dict, mtype: str, item_id: int = None):
     db.execute("UPDATE grab SET dl_id=? WHERE id=?", (dl, gid))
     if item_id: db.execute("UPDATE item SET status='wanted' WHERE id=? AND status='missing'", (item_id,))
     db.commit(); log.info("Grabbed %s via %s", rel["title"], kind); await notify("onGrab", f"Grabbed: {rel['title']}")
+    return c["name"] or kind
 
 @app.get("/api/v1/queue", dependencies=API)
 async def queue():
@@ -153,18 +186,27 @@ async def prowlarr(term, mtype):
     return [{"title": i["title"], "type": mtype, "size": i.get("size", 0), "seeders": i.get("seeders"), "indexer": i.get("indexer"),
              "protocol": i.get("protocol"), "downloadUrl": i.get("downloadUrl") or i.get("magnetUrl"), "publishDate": i.get("publishDate")} for i in r.json()]
 
+def age_days(v):
+    try: return max(0, (datetime.now(timezone.utc) - datetime.fromisoformat(v.replace("Z", "+00:00"))).days)
+    except Exception: return None
 @app.get("/api/v1/search", dependencies=API)
-async def search(term: str, types: str = "comic,ebook,audiobook"):
-    res = await asyncio.gather(*[prowlarr(term, t) for t in types.split(",") if t in TYPES])
-    return sorted([r for g in res for r in g], key=lambda r: -(r["seeders"] or 0))
+async def search(term: str, types: str = "comic,ebook,audiobook", strict: int = 1):
+    res = await asyncio.gather(*[prowlarr(term, t) for t in types.split(",") if t in TYPES]); out = []; hidden = 0
+    for r in (x for g in res for x in g):
+        r["score"] = relevance(term, r["title"]); r["age"] = age_days(r.get("publishDate"))
+        if strict and r["score"] == 0: hidden += 1
+        else: out.append(r)
+    return {"results": sorted(out, key=lambda r: (-r["score"], -(r["seeders"] or 0))), "hidden": hidden}
 @app.post("/api/v1/release", dependencies=API)
 async def grab(request: Request):
-    b = await request.json(); await send_to_client(b, b["type"], b.get("item_id")); return {"ok": True}
+    b = await request.json(); return {"ok": True, "client": await send_to_client(b, b["type"], b.get("item_id"))}
 
 # ---------- library ----------
 @app.get("/api/v1/item", dependencies=API)
 def items(type: str = None):
-    return rows("SELECT * FROM item WHERE (?1 IS NULL OR type=?1) ORDER BY added DESC", (type,))
+    out = rows("SELECT * FROM item WHERE (?1 IS NULL OR type=?1) ORDER BY added DESC", (type,))
+    for i in out: i["file_size"] = os.path.getsize(i["path"]) if i["path"] and os.path.exists(i["path"]) else None
+    return out
 FIELDS = ("series_id", "num", "type", "title", "author", "series", "year", "release_date", "description", "cover", "provider", "ext_id", "publisher")
 @app.post("/api/v1/item", dependencies=API)
 async def add_item(request: Request):
@@ -465,13 +507,25 @@ def terms(it):
         try: n = int(float(it["num"])); return [f'{it["series"]} {n:03d}', f'{it["series"]} {n}', f'{it["series"]} #{n}']
         except ValueError: pass
     return [it["title"]]
+STOP = {"the", "a", "an", "of", "and", "comic", "comics", "ebook", "audiobook"}
+toks = lambda v: re.findall(r"[a-z0-9]+", (v or "").lower().replace("&", " and "))
+PACK = re.compile(r"\b(complete|collection|collections|pack|bundle|omnibus|megapack|library)\b|\d{1,4}\s*-\s*\d{1,4}", re.I)
+def relevance(term, title):
+    """0 = not a match. Every word in the search must be in the release and every number must be a number in it (so 'Deadpool 5' skips 'Deadpool 50')."""
+    q = [t for t in toks(term) if t not in STOP]
+    if not q: return 1.0
+    tt = toks(title); ts = set(tt)
+    if any(w not in ts for w in q if not w.isdigit()): return 0.0
+    tn = {int(t) for t in tt if t.isdigit()}
+    nums = [int(t) for t in q if t.isdigit()]
+    if any(n not in tn for n in nums): return 0.0
+    score = 1.0 + (1.0 if " ".join(q) in " ".join(tt) else 0.0)
+    if nums and PACK.search(title): score -= 0.6
+    return max(score, 0.1)
 def matches(it, r):
-    t = r["title"].lower(); words = re.findall(r"\w+", (it.get("series") or it["title"]).lower())[:3]
-    if not all(w in t for w in words): return False
-    if it.get("num") and it.get("series"):
-        try: return re.search(rf"(?<!\d)0*{int(float(it['num']))}(?!\d)", t) is not None
-        except ValueError: return True
-    return True
+    num = str(it.get("num") or "")
+    term = f'{it["series"]} {int(float(num))}' if it.get("series") and re.fullmatch(r"\d+(\.\d+)?", num) else " ".join(toks(it["title"])[:6])
+    return relevance(term, r["title"]) > 0
 async def search_item(it):
     db.execute("UPDATE item SET last_search=datetime('now') WHERE id=?", (it["id"],)); db.commit()
     q = cfg("quality"); cap = (q.get(it["type"] + "MaxMB") or 0) * 1048576; bl = {b["title"] for b in rows("SELECT title FROM blocklist")}
@@ -729,4 +783,9 @@ async def maint_loop():
         except Exception as e: log.warning("Maintenance: %s", e)
         await asyncio.sleep(12 * 3600)
 
-app.mount("/", StaticFiles(directory=pathlib.Path(__file__).parent / "static", html=True))
+SD = pathlib.Path(__file__).parent / "static"
+try:
+    SD.mkdir(exist_ok=True)
+    if (SD.parent / "index.html").exists(): shutil.copy(SD.parent / "index.html", SD / "index.html")
+except OSError: pass
+app.mount("/", StaticFiles(directory=SD, html=True))

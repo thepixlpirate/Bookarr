@@ -5,8 +5,6 @@ services:
     ports: ["8787:8787"]
     volumes:
       - ./config:/config
-      - /mnt/user/media/comics:/comics
-      - /mnt/user/media/books:/books
-      - /mnt/user/media/audiobooks:/audiobooks
+      - /mnt/user/Books:/books
       - /mnt/user/downloads:/downloads
     restart: unless-stopped
