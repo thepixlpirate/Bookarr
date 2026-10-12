@@ -1,7 +1,7 @@
 """Bookarr: comics, ebooks, audiobooks. Indexers via Prowlarr, clients: SABnzbd + qBittorrent."""
 import os, shutil, re, json, secrets, sqlite3, asyncio, pathlib, logging, base64, collections
 from contextlib import asynccontextmanager
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 import httpx
 from fastapi import FastAPI, Depends, HTTPException, Header, Query, Request
 from fastapi.responses import FileResponse, Response, PlainTextResponse
@@ -89,14 +89,38 @@ def get_cfg(sec: str):
 @app.put("/api/v1/config/{sec}", dependencies=API)
 async def put_cfg(sec: str, request: Request):
     if sec not in DEFAULTS: raise HTTPException(404)
-    setcfg(sec, await request.json()); return cfg(sec)
+    b = await request.json()
+    if sec == "indexer" and b.get("prowlarrUrl"): b["prowlarrUrl"] = norm_url(b["prowlarrUrl"])
+    setcfg(sec, b); return cfg(sec)
+@app.post("/api/v1/indexer/test", dependencies=API)
+async def test_indexer():
+    c = cfg("indexer"); url = norm_url(c["prowlarrUrl"])
+    if not url: return {"ok": False, "message": "Enter your Prowlarr URL first."}
+    try:
+        async with httpx.AsyncClient(timeout=10) as x:
+            r = await x.get(url + "/api/v1/system/status", headers={"X-Api-Key": c["prowlarrKey"]})
+            if r.status_code in (401, 403): return {"ok": False, "message": "Reached Prowlarr, but it rejected the API key."}
+            if r.status_code != 200: return {"ok": False, "message": f"Prowlarr returned {r.status_code}. Check the URL."}
+            n = len((await x.get(url + "/api/v1/indexer", headers={"X-Api-Key": c["prowlarrKey"]})).json())
+            return {"ok": True, "message": f"Connected to Prowlarr {r.json().get('version', '')} with {n} indexer(s)"}
+    except httpx.ConnectError: return {"ok": False, "message": f"Cannot connect to {url}. Check the address and port."}
+    except Exception as e: return {"ok": False, "message": f"Failed: {e}"}
 
 # ---------- download clients ----------
+for _c in rows("SELECT id,url FROM client"):
+    if norm_url(_c["url"]) != _c["url"]: db.execute("UPDATE client SET url=? WHERE id=?", (norm_url(_c["url"]), _c["id"]))
+db.commit()
 @app.get("/api/v1/downloadclient", dependencies=API)
 def clients(): return rows("SELECT * FROM client")
+async def qb_login(x, c):
+    k = c.keys(); u = norm_url(c["url"])
+    return await x.post(u + "/api/v2/auth/login", data={"username": (c["username"] if "username" in k else "") or "", "password": (c["password"] if "password" in k else "") or ""},
+                        headers={"Referer": u, "Origin": u})
 def norm_url(u):
-    u = (u or "").strip().rstrip("/")
-    return u if re.match(r"https?://", u) else "http://" + u
+    u = (u or "").strip()
+    if not u: return ""
+    if not re.match(r"https?://", u, re.I): u = "http://" + u
+    p = urlsplit(u); return f"{p.scheme}://{p.netloc}{p.path.rstrip('/')}"
 async def test_client(c):
     url = norm_url(c["url"])
     try:
@@ -107,9 +131,10 @@ async def test_client(c):
                 q = (await x.get(url + "/api", params={"mode": "queue", "limit": 1, "output": "json", "apikey": c.get("apikey", "")})).json()
                 if "error" in q: return {"ok": False, "message": f"Reached SABnzbd {v}, but it said: {q['error']}"}
                 return {"ok": True, "message": f"Connected to SABnzbd {v}"}
-            r = await x.post(url + "/api/v2/auth/login", data={"username": c.get("username", ""), "password": c.get("password", "")})
+            r = await qb_login(x, c)
             if r.status_code == 403: return {"ok": False, "message": "qBittorrent refused the login (too many failed attempts, or its Web UI blocks this address). Wait a few minutes and check its Web UI settings."}
-            if r.text.strip() != "Ok.": return {"ok": False, "message": "Reached qBittorrent, but the username or password is wrong."}
+            if r.text.strip() == "Fails.": return {"ok": False, "message": f"Reached qBittorrent, but it rejected the login. Bookarr sent username \"{(c.get('username') or '').strip()}\" and a password of {len((c.get('password') or '').strip())} characters. If that is not what you expect, tap Edit and re-enter them."}
+            if r.text.strip() != "Ok.": return {"ok": False, "message": "That address did not answer like qBittorrent's API. Use just http://ip:port, with nothing after the port."}
             return {"ok": True, "message": "Connected to qBittorrent " + (await x.get(url + "/api/v2/app/version")).text}
     except ValueError: return {"ok": False, "message": "That address answered, but not like " + ("SABnzbd" if c["kind"] == "sabnzbd" else "qBittorrent") + ". Check the port."}
     except httpx.ConnectError: return {"ok": False, "message": f"Cannot connect to {url}. Check the address and port."}
@@ -119,7 +144,7 @@ async def test_client(c):
 async def add_client(request: Request):
     b = await request.json(); b["url"] = norm_url(b["url"])
     c = db.execute("INSERT INTO client(name,kind,url,apikey,username,password,category) VALUES(?,?,?,?,?,?,?)",
-        (b.get("name"), b["kind"], b["url"], b.get("apikey", ""), b.get("username", ""), b.get("password", ""), b.get("category", ""))); db.commit()
+        (b.get("name"), b["kind"], b["url"], (b.get("apikey") or "").strip(), (b.get("username") or "").strip(), (b.get("password") or "").strip(), b.get("category", ""))); db.commit()
     res = await test_client(b); log.info("Added %s client %s: %s", b["kind"], b.get("name"), res["message"])
     return {"id": c.lastrowid, **res}
 @app.post("/api/v1/downloadclient/test", dependencies=API)
@@ -129,6 +154,12 @@ async def test_saved_client(cid: int):
     r = rows("SELECT * FROM client WHERE id=?", (cid,))
     if not r: raise HTTPException(404)
     return await test_client(r[0])
+@app.put("/api/v1/downloadclient/{cid}", dependencies=API)
+async def edit_client(cid: int, request: Request):
+    b = await request.json(); b["url"] = norm_url(b["url"])
+    db.execute("UPDATE client SET name=?,kind=?,url=?,apikey=?,username=?,password=?,category=? WHERE id=?",
+        (b.get("name"), b["kind"], b["url"], (b.get("apikey") or "").strip(), (b.get("username") or "").strip(), (b.get("password") or "").strip(), b.get("category", ""), cid)); db.commit()
+    return {"id": cid, **await test_client(b)}
 @app.delete("/api/v1/downloadclient/{cid}", dependencies=API)
 def del_client(cid: int): db.execute("DELETE FROM client WHERE id=?", (cid,)); db.commit(); return {}
 
@@ -144,7 +175,7 @@ async def send_to_client(rel: dict, mtype: str, item_id: int = None):
                 r = await x.get(c["url"] + "/api", params={"mode": "addurl", "name": rel["downloadUrl"], "nzbname": rel["title"], "cat": cat, "apikey": c["apikey"], "output": "json"})
                 dl = ((r.json().get("nzo_ids") or [None])[0]) if r.status_code == 200 else None
             else:
-                await x.post(c["url"] + "/api/v2/auth/login", data={"username": c["username"], "password": c["password"]})
+                await qb_login(x, c)
                 dl = f"bookarr-{gid}"
                 r = await x.post(c["url"] + "/api/v2/torrents/add", data={"urls": rel["downloadUrl"], "category": cat, "tags": dl})
             if r.status_code != 200 or not dl: raise HTTPException(502, f"{kind} did not accept the release")
@@ -167,7 +198,7 @@ async def queue():
     for g in rows("SELECT g.dl_id, g.title, c.url, c.username, c.password, c.name FROM grab g JOIN client c ON c.id=g.client_id WHERE g.state='sent' AND g.protocol!='usenet'"):
         try:
             async with httpx.AsyncClient(timeout=10) as x:
-                await x.post(g["url"] + "/api/v2/auth/login", data={"username": g["username"], "password": g["password"]})
+                await qb_login(x, g)
                 for t in (await x.get(g["url"] + "/api/v2/torrents/info", params={"tag": g["dl_id"]})).json():
                     out.append({"title": t["name"], "progress": round(t["progress"] * 100), "status": t["state"], "client": g["name"]})
         except Exception as e: log.warning("Torrent queue fetch failed: %s", e)
@@ -181,8 +212,15 @@ async def cmd_check(): await check_downloads(); return {"ok": True}
 async def prowlarr(term, mtype):
     c = cfg("indexer")
     if not c["prowlarrUrl"]: raise HTTPException(400, "Set the Prowlarr URL and API key in Settings > Indexers")
-    async with httpx.AsyncClient(timeout=60) as x:
-        r = await x.get(c["prowlarrUrl"].rstrip("/") + "/api/v1/search", params={"query": term, "categories": TYPES[mtype], "type": "search"}, headers={"X-Api-Key": c["prowlarrKey"]})
+    url = norm_url(c["prowlarrUrl"])
+    try:
+        async with httpx.AsyncClient(timeout=60) as x:
+            r = await x.get(url + "/api/v1/search", params={"query": term, "categories": TYPES[mtype], "type": "search"}, headers={"X-Api-Key": c["prowlarrKey"]})
+    except httpx.ConnectError: raise HTTPException(502, f"Cannot connect to Prowlarr at {url}. Check the address and port in Settings > Indexers.")
+    except httpx.TimeoutException: raise HTTPException(502, "Prowlarr took too long to answer the search.")
+    except httpx.HTTPError as e: raise HTTPException(502, f"Prowlarr request failed: {e}")
+    if r.status_code in (401, 403): raise HTTPException(502, "Prowlarr rejected the API key. Check it in Settings > Indexers.")
+    if r.status_code != 200: raise HTTPException(502, f"Prowlarr returned {r.status_code}. Check the URL in Settings > Indexers.")
     return [{"title": i["title"], "type": mtype, "size": i.get("size", 0), "seeders": i.get("seeders"), "indexer": i.get("indexer"),
              "protocol": i.get("protocol"), "downloadUrl": i.get("downloadUrl") or i.get("magnetUrl"), "publishDate": i.get("publishDate")} for i in r.json()]
 
@@ -467,7 +505,7 @@ async def check_downloads():
                     if sl and sl[0]["status"] == "Completed": done = sl[0]["storage"]
                     elif sl and sl[0]["status"] == "Failed": fail_grab(g, sl[0].get("fail_message") or "SABnzbd reported failure"); continue
                 else:
-                    await x.post(g["url"] + "/api/v2/auth/login", data={"username": g["username"], "password": g["password"]})
+                    await qb_login(x, g)
                     ts = (await x.get(g["url"] + "/api/v2/torrents/info", params={"tag": g["dl_id"]})).json()
                     if ts and ts[0]["progress"] >= 1: done = ts[0].get("content_path") or os.path.join(ts[0]["save_path"], ts[0]["name"])
                     elif ts and ts[0]["state"] in ("error", "missingFiles"): fail_grab(g, ts[0]["state"]); continue
@@ -710,7 +748,7 @@ async def health():
     if not ind["prowlarrUrl"]: add(False, "Indexers", "Set the Prowlarr URL and API key in Settings > Indexers")
     else:
         try:
-            async with httpx.AsyncClient(timeout=8) as x: r = await x.get(ind["prowlarrUrl"].rstrip("/") + "/api/v1/system/status", headers={"X-Api-Key": ind["prowlarrKey"]})
+            async with httpx.AsyncClient(timeout=8) as x: r = await x.get(norm_url(ind["prowlarrUrl"]) + "/api/v1/system/status", headers={"X-Api-Key": ind["prowlarrKey"]})
             add(r.status_code == 200, "Prowlarr", "Connected" if r.status_code == 200 else f"Prowlarr answered {r.status_code}; check the API key")
         except Exception: add(False, "Prowlarr", f"Cannot reach {ind['prowlarrUrl']}")
     cl = rows("SELECT * FROM client WHERE enabled=1")
@@ -720,7 +758,7 @@ async def health():
             async with httpx.AsyncClient(timeout=8) as x:
                 if c["kind"] == "sabnzbd": r = await x.get(c["url"] + "/api", params={"mode": "version", "apikey": c["apikey"], "output": "json"})
                 else:
-                    await x.post(c["url"] + "/api/v2/auth/login", data={"username": c["username"], "password": c["password"]}); r = await x.get(c["url"] + "/api/v2/app/version")
+                    await qb_login(x, c); r = await x.get(c["url"] + "/api/v2/app/version")
             add(r.status_code == 200, c["name"] or c["kind"], "Connected" if r.status_code == 200 else "Login failed; check credentials")
         except Exception: add(False, c["name"] or c["kind"], f"Cannot reach {c['url']}")
     for t in TYPES:
