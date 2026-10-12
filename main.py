@@ -107,9 +107,6 @@ async def test_indexer():
     except Exception as e: return {"ok": False, "message": f"Failed: {e}"}
 
 # ---------- download clients ----------
-for _c in rows("SELECT id,url FROM client"):
-    if norm_url(_c["url"]) != _c["url"]: db.execute("UPDATE client SET url=? WHERE id=?", (norm_url(_c["url"]), _c["id"]))
-db.commit()
 @app.get("/api/v1/downloadclient", dependencies=API)
 def clients(): return rows("SELECT * FROM client")
 async def qb_login(x, c):
@@ -121,6 +118,9 @@ def norm_url(u):
     if not u: return ""
     if not re.match(r"https?://", u, re.I): u = "http://" + u
     p = urlsplit(u); return f"{p.scheme}://{p.netloc}{p.path.rstrip('/')}"
+for _c in rows("SELECT id,url FROM client"):
+    if norm_url(_c["url"]) != _c["url"]: db.execute("UPDATE client SET url=? WHERE id=?", (norm_url(_c["url"]), _c["id"]))
+db.commit()
 async def test_client(c):
     url = norm_url(c["url"])
     try:
