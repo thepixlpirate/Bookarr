@@ -36,7 +36,7 @@ DEFAULTS = {
     "general": {"logLevel": "info", "apiKey": ""},
     "indexer": {"prowlarrUrl": "", "prowlarrKey": ""},
     "library": {"comic": "/books/Comics", "ebook": "/books/Ebooks", "audiobook": "/books/Audiobooks", "downloads": "/downloads"},
-    "media": {"autoSearchMinutes": 60, "minSeeders": 1, "importMode": "auto", "remotePath": "", "localPath": ""},
+    "media": {"autoSearchMinutes": 60, "minSeeders": 1, "importMode": "auto", "remotePath": "", "localPath": "", "catComic": "comics", "catEbook": "ebooks", "catAudiobook": "audiobooks"},
     "metadata": {"comicvineKey": "", "googleBooksKey": "", "audibleRegion": "com", "writeTags": 1},
     "quality": {"comic": "cbz,cbr,pdf", "ebook": "epub,azw3,mobi,pdf", "audiobook": "m4b,mp3", "comicMaxMB": 500, "ebookMaxMB": 200, "audiobookMaxMB": 3000, "requirePreferred": 0},
     "notifications": {"onGrab": 1, "onImport": 1, "onFail": 1, "discordWebhook": "", "pushoverUser": "", "pushoverToken": "", "telegramToken": "", "telegramChat": "", "webhookUrl": ""},
@@ -167,7 +167,7 @@ async def send_to_client(rel: dict, mtype: str, item_id: int = None):
     kind = "sabnzbd" if rel["protocol"] == "usenet" else "qbittorrent"
     c = db.execute("SELECT * FROM client WHERE kind=? AND enabled=1 LIMIT 1", (kind,)).fetchone()
     if not c: raise HTTPException(400, f"No enabled {kind} client configured")
-    cat = c["category"] or "books"
+    cat = c["category"] or cfg("media")[{"comic": "catComic", "ebook": "catEbook", "audiobook": "catAudiobook"}[mtype]]
     gid = db.execute("INSERT INTO grab(item_id,type,title,protocol,client_id) VALUES(?,?,?,?,?)", (item_id, mtype, rel["title"], rel["protocol"], c["id"])).lastrowid
     try:
         async with httpx.AsyncClient(timeout=30) as x:
@@ -260,13 +260,47 @@ async def upd_item(iid: int, request: Request):
 @app.delete("/api/v1/item/{iid}", dependencies=API)
 def del_item(iid: int, deleteFile: int = 0):
     r = rows("SELECT path FROM item WHERE id=?", (iid,))
-    if deleteFile and r and r[0]["path"] and os.path.exists(r[0]["path"]): os.remove(r[0]["path"])
+    if deleteFile and r and r[0]["path"] and os.path.exists(r[0]["path"]): os.remove(r[0]["path"]); prune_empty(os.path.dirname(r[0]["path"]))
     db.execute("DELETE FROM item WHERE id=?", (iid,)); db.commit(); return {}
+def add_size(its):
+    for i in its: i["file_size"] = os.path.getsize(i["path"]) if i.get("path") and os.path.exists(i["path"]) else None
+    return its
+def file_list(it):
+    p = it.get("path")
+    if not p: return []
+    ps, d = [p], os.path.dirname(p)
+    if it["type"] == "audiobook" and os.path.isdir(d): ps = [os.path.join(d, f) for f in sorted(os.listdir(d)) if pathlib.Path(f).suffix.lower() in EXT["audiobook"]] or [p]
+    out = []
+    for q in ps:
+        ex = os.path.exists(q); st = os.stat(q) if ex else None
+        out.append({"name": os.path.basename(q), "folder": os.path.dirname(q), "path": q, "ext": pathlib.Path(q).suffix.lstrip(".").upper(), "size": st.st_size if st else None,
+                    "modified": datetime.fromtimestamp(st.st_mtime, timezone.utc).strftime("%Y-%m-%d") if st else None, "exists": ex, "primary": q == p})
+    return out
+def prune_empty(d):  # remove now-empty series/author folders, never the library roots themselves
+    roots = [str(pathlib.Path(cfg("library")[k]).resolve()) for k in ("comic", "ebook", "audiobook")]; p = pathlib.Path(d).resolve()
+    while str(p) not in roots and any(str(p).startswith(r + os.sep) for r in roots):
+        try: p.rmdir()
+        except OSError: break
+        p = p.parent
+@app.get("/api/v1/item/{iid}", dependencies=API)
+def item_get(iid: int):
+    r = rows("SELECT * FROM item WHERE id=?", (iid,))
+    if not r: raise HTTPException(404, "That title is no longer in Bookarr.")
+    it = add_size(r)[0]; it["files"] = file_list(it); it["history"] = rows("SELECT * FROM grab WHERE item_id=? ORDER BY id DESC LIMIT 20", (iid,)); return it
 @app.get("/api/v1/item/{iid}/file", dependencies=API)
-def item_file(iid: int):
-    r = rows("SELECT path FROM item WHERE id=?", (iid,))
+def item_file(iid: int, path: str = None):
+    r = rows("SELECT * FROM item WHERE id=?", (iid,))
     if not r or not r[0]["path"]: raise HTTPException(404)
-    return FileResponse(r[0]["path"])
+    p = path if path and path in [f["path"] for f in file_list(r[0])] else r[0]["path"]
+    if not os.path.exists(p): raise HTTPException(404, "The file is missing on disk.")
+    return FileResponse(p, filename=os.path.basename(p))
+@app.delete("/api/v1/item/{iid}/file", dependencies=API)
+def item_file_delete(iid: int, path: str, unmonitor: int = 0):
+    r = rows("SELECT * FROM item WHERE id=?", (iid,))
+    if not r or path not in [f["path"] for f in file_list(r[0])] + [r[0]["path"]]: raise HTTPException(400, "That file does not belong to this title.")
+    if os.path.exists(path): os.remove(path)
+    db.execute("UPDATE item SET path=NULL, status='missing', monitored=CASE WHEN ?=1 THEN 0 ELSE monitored END WHERE path=?", (unmonitor, path)); db.commit()
+    prune_empty(os.path.dirname(path)); log.info("Deleted file %s", path); return {"ok": True}
 @app.get("/api/v1/wanted/missing", dependencies=API)
 def missing(): return rows("SELECT * FROM item WHERE monitored=1 AND status='missing' ORDER BY release_date DESC")
 @app.get("/api/v1/wanted/newest", dependencies=API)
@@ -694,7 +728,7 @@ async def add_series(request: Request):
     return {"id": sid, "added": added}
 @app.get("/api/v1/series/{sid}", dependencies=API)
 def series_get(sid: int):
-    return {"series": rows(SQ + " WHERE s.id=? GROUP BY s.id", (sid,))[0], "items": rows("SELECT * FROM item WHERE series_id=? ORDER BY CAST(num AS REAL), release_date", (sid,))}
+    return {"series": rows(SQ + " WHERE s.id=? GROUP BY s.id", (sid,))[0], "items": add_size(rows("SELECT * FROM item WHERE series_id=? ORDER BY CAST(num AS REAL), release_date", (sid,)))}
 @app.put("/api/v1/series/{sid}", dependencies=API)
 async def series_put(sid: int, request: Request):
     b = await request.json()

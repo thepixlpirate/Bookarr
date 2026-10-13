@@ -48,6 +48,9 @@ a.l{color:var(--bl)}.msg{color:var(--te);margin-left:10px}
  .grid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:12px}.f{grid-template-columns:1fr}.mh{grid-template-columns:96px 1fr;gap:12px}
  .ov{padding:0;align-items:stretch}.md{width:100%;max-height:100dvh;height:100dvh;border-radius:0;padding:14px}main table{display:block;overflow-x:auto}
  .rr.rh{display:none}.rsort{display:block;margin:0 0 8px;width:100%}.rr{display:flex;flex-wrap:wrap;gap:2px 12px;padding:12px 4px}.rr .t{flex:1 1 100%}.rr .c{font-size:12px}.rr .b{margin-left:auto}}
+.ip{display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;margin-bottom:24px}.ip .po{width:100%}.fi{overflow-wrap:anywhere}.fi small{display:block;color:var(--mu)}
+.dgl{max-width:480px;height:auto!important;align-self:center}h3{margin:24px 0 8px}
+@media(max-width:760px){.ip{grid-template-columns:104px minmax(0,1fr);gap:12px}}
 </style></head><body>
 <nav id="nav"></nav>
 <div class="col"><header id="hd"></header><main id="m"></main></div>
@@ -63,21 +66,21 @@ let flt='all',RSORT={k:'score',d:-1},RFILT='all',STRICT=1;
 let view='main',term='',sub='clients',types={comic:1,ebook:1,audiobook:1},REG=[];
 const LOGO='<svg width="26" height="26" viewBox="0 0 26 26"><rect width="26" height="26" rx="6" fill="#8b5cf6"/><path d="M7 6h9a3 3 0 013 3v11H10a3 3 0 01-3-3z" fill="none" stroke="#2dd4bf" stroke-width="2"/><path d="M11 11h5" stroke="#fff" stroke-width="2"/></svg>';
 function chrome(){$('#nav').innerHTML=`<div class="logo">${LOGO}Bookarr</div>`+NAV.map(n=>n=='-'?'<hr>':`<a tabindex=0 class="${view==n[0]?'on':''}" data-k="${n[0]}">${n[1]}</a>`).join('');
- document.querySelectorAll('nav a').forEach(a=>{a.onclick=()=>{view=a.dataset.k;term='';go()};a.onkeydown=e=>{if(e.key=='Enter')a.click()}});
+ document.querySelectorAll('nav a').forEach(a=>{a.onclick=()=>{view=a.dataset.k;term='';history.replaceState(null,'',location.pathname);go()};a.onkeydown=e=>{if(e.key=='Enter')a.click()}});
  $('#hd').innerHTML=`<h1>${TITLE[view]}</h1><span class="sp"></span><input type="search" id="q" placeholder="Search for a title, e.g. Deadpool" value="${esc(term)}">
  ${Object.keys(types).map(t=>`<label class="ck"><input type="checkbox" data-t="${t}" ${types[t]?'checked':''}>${t=='comic'?'Comics':t=='ebook'?'Ebooks':'Audiobooks'}</label>`).join('')}<button class="p" id="go">Search</button>`;
- const run=()=>{term=$('#q').value.trim();go()};$('#go').onclick=run;$('#q').onkeydown=e=>{if(e.key=='Enter')run()};
+ const run=()=>{term=$('#q').value.trim();history.replaceState(null,'',location.pathname);go()};$('#go').onclick=run;$('#q').onkeydown=e=>{if(e.key=='Enter')run()};
  document.querySelectorAll('[data-t]').forEach(c=>c.onchange=()=>types[c.dataset.t]=c.checked?1:0)}
 const st=i=>i.status=='downloaded'?'have':i.status=='wanted'?'want':i.monitored?'miss':'off';
 const BL={have:'Downloaded',want:'Downloading',miss:'Missing',off:'Unmonitored'};
-function poster(i,src,lib){const k=REG.push(i)-1;let s=st(i),b=lib?(i._b||BL[s]):'';if(lib&&i.status=='downloaded'&&'file_size' in i&&i.file_size==null){s='miss';b='File missing'}
+function poster(i,src,lib){const k=REG.push(i)-1;let s=st(i),b=lib?(i._b||BL[s]):'';if(lib&&!i._s&&i.status=='downloaded'&&i.path&&i.file_size!=null)b='Downloaded, '+i.path.split('.').pop().toUpperCase();if(lib&&i.status=='downloaded'&&'file_size' in i&&i.file_size==null){s='miss';b='File missing'}
  return `<div class="pc ${lib?s:''}" tabindex=0 data-i="${k}"><div class="po">${src?`<img loading=lazy src="${esc(src)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc((i.title||'?').slice(0,2))}</span><span class="tag">${i.type}</span>${b?`<span class="bd">${esc(b)}</span>`:''}<i class="bar"></i></div><b>${esc(i.title)}</b><small>${esc([i.author||i.series,i.year].filter(Boolean).join(', '))}</small></div>`}
 const FL={all:()=>1,have:i=>i.status=='downloaded',miss:i=>i.status=='missing',want:i=>i.status=='wanted'};
 function drawLib(m,it){REG=[];const c=k=>it.filter(FL[k]).length,L=[['all','All'],['have','Downloaded'],['miss','Missing'],['want','Downloading']],v=it.filter(FL[flt]),sa=view=='comic'?it.filter(i=>i.type=='comic'&&!i.series_id).length:0;
  m.innerHTML=`<div class="chips">${L.map(([k,l])=>`<button class="${flt==k?'on':''}" data-f="${k}">${l} (${c(k)})</button>`).join('')}</div>`+(sa?`<div class="note">${sa} comic${sa>1?'s are':' is'} not part of a monitored series. Open one and tap <b>Find series</b> to track the whole run.</div>`:'')+
  (v.length?`<div class="grid">${v.map(i=>poster(i,'/api/v1/cover/'+i.id+'?apikey='+KEY,1)).join('')}</div>`:'<div class="empty">Nothing matches this filter.</div>');
  m.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{flt=b.dataset.f;drawLib(m,it)});bindPosters()}
-function bindPosters(){document.querySelectorAll('.pc').forEach(p=>{p.onclick=()=>{const i=REG[p.dataset.i];i._s?seriesModal(i):modal(i)};p.onkeydown=e=>{if(e.key=='Enter')p.click()}})}
+function bindPosters(){document.querySelectorAll('.pc').forEach(p=>{p.onclick=()=>{const i=REG[p.dataset.i];i._s?location.hash='#/series/'+i.id:i.id?location.hash='#/item/'+i.id:modal(i)};p.onkeydown=e=>{if(e.key=='Enter')p.click()}})}
 async function go(){chrome();REG=[];const m=$('#m');m.innerHTML='<div class="empty">Loading…</div>';
  try{if(view=='settings')return await settings(m);
   if(view=='series')return await seriesView(m);if(view=='calendar')return await calView(m);if(view=='system')return await systemView(m);
@@ -130,7 +133,7 @@ async function releases(o,i){o.innerHTML='<div class="empty">Searching indexers�
  draw()}
 const FORMS={general:[['logLevel','Log level']],indexer:[['prowlarrUrl','Prowlarr URL'],['prowlarrKey','Prowlarr API key']],
  library:[['comic','Comics folder'],['ebook','Ebooks folder'],['audiobook','Audiobooks folder'],['downloads','Downloads folder']],
- media:[['autoSearchMinutes','Search every (minutes)'],['minSeeders','Minimum seeders'],['importMode','Import mode (auto, move, copy, hardlink)'],['remotePath','Download path as the client sees it'],['localPath','Same folder as Bookarr sees it']],
+ media:[['autoSearchMinutes','Search every (minutes)'],['minSeeders','Minimum seeders'],['importMode','Import mode (auto, move, copy, hardlink)'],['remotePath','Download path as the client sees it'],['localPath','Same folder as Bookarr sees it'],['catComic','Download category for comics'],['catEbook','Download category for ebooks'],['catAudiobook','Download category for audiobooks']],
  metadata:[['comicvineKey','ComicVine API key'],['googleBooksKey','Google Books API key (optional)'],['audibleRegion','Audible region (com, co.uk, de...)'],['writeTags','Write tags into files after import (1 or 0)']],
  quality:[['comic','Comic formats, best first'],['ebook','Ebook formats, best first'],['audiobook','Audiobook formats, best first'],['comicMaxMB','Comic max size (MB, 0 = no limit)'],['ebookMaxMB','Ebook max size (MB)'],['audiobookMaxMB','Audiobook max size (MB)'],['requirePreferred','Only accept preferred formats (1 or 0)']],
  notifications:[['onGrab','Notify on grab (1 or 0)'],['onImport','Notify on import (1 or 0)'],['onFail','Notify on failure (1 or 0)'],['discordWebhook','Discord webhook URL'],['pushoverUser','Pushover user key'],['pushoverToken','Pushover app token'],['telegramToken','Telegram bot token'],['telegramChat','Telegram chat ID'],['webhookUrl','Generic webhook URL']],
@@ -142,8 +145,8 @@ async function settings(m){m.innerHTML=`<div class="tabs">${SUBS.map(([k,l])=>`<
  if(sub=='logs'){const l=await api('log');o.innerHTML='<table>'+l.map(x=>`<tr><td>${esc(x.time)}<td>${x.level}<td>${esc(x.message)}</tr>`).join('')+'</table>';return}
  if(sub=='devices')return await devicesView(o);
  if(sub=='clients'){const c=await api('downloadclient');o.innerHTML=(c.length?'<div class="tw"><table>'+c.map(x=>`<tr><td>${esc(x.name)}<td>${x.kind}<td>${esc(x.url)}<td id="cs${x.id}" class="mu">Checking…<td><button data-t="${x.id}">Test</button> <button data-e="${x.id}">Edit</button> <button class="dg" data-d="${x.id}">Remove</button></tr>`).join('')+'</table></div>':'<div class="empty">No download clients yet.</div>')+
-  `<h3>Add download client</h3><div class="f"><span>Name</span><input id=n><span>Type</span><select id=k><option>sabnzbd<option>qbittorrent</select><span>URL</span><input id=u placeholder="http://your-server-ip:8080" inputmode=url autocapitalize=off><span>API key (SABnzbd)</span><input id=a autocapitalize=off><span>Username (qBittorrent)</span><input id=us autocapitalize=off><span>Password (qBittorrent)</span><input id=pw type=password><span>Category</span><input id=c placeholder="books" autocapitalize=off></div>
-  <p class="mu">Category must match the category in SABnzbd or qBittorrent (blank means "books"). Bookarr checks the connection as soon as you add the client.</p><button class="p" id=add>Add client</button> <button id=tst>Test first</button><div id="res"></div>`;
+  `<h3>Add download client</h3><div class="f"><span>Name</span><input id=n><span>Type</span><select id=k><option>sabnzbd<option>qbittorrent</select><span>URL</span><input id=u placeholder="http://your-server-ip:8080" inputmode=url autocapitalize=off><span>API key (SABnzbd)</span><input id=a autocapitalize=off><span>Username (qBittorrent)</span><input id=us autocapitalize=off><span>Password (qBittorrent)</span><input id=pw type=password><span>Category</span><input id=c placeholder="leave blank" autocapitalize=off></div>
+  <p class="mu">Leave Category blank. Bookarr then sends comics, ebooks and audiobooks with their own categories (set under Settings &gt; Media) so each type downloads into its own folder. Bookarr checks the connection as soon as you add the client.</p><button class="p" id=add>Add client</button> <button id=tst>Test first</button><div id="res"></div>`;
   const show=(el,r)=>{el.className=r.ok?'':'';el.style.color=r.ok?'var(--te)':'#f08aa0';el.textContent=(r.ok?'✓ ':'✗ ')+r.message};
   c.forEach(x=>api('downloadclient/'+x.id+'/test',{method:'POST'}).then(r=>show($('#cs'+x.id),r)).catch(e=>show($('#cs'+x.id),{ok:0,message:e.message})));
   document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const el=$('#cs'+b.dataset.t);el.style.color='';el.textContent='Checking…';api('downloadclient/'+b.dataset.t+'/test',{method:'POST'}).then(r=>show(el,r))});
@@ -203,5 +206,43 @@ async function devicesView(o){const d=await api('device');
  o.innerHTML=`<p class="mu">Give each reading app its own key so you can revoke one without breaking the others.</p>`+(d.length?'<table><tr><th>Name<th>Catalog address<th>Last used<th></tr>'+d.map(x=>`<tr><td>${esc(x.name)}<td class="mu">${location.origin}/opds?apikey=${x.key}<td class="mu">${esc(x.last_used||'never')}<td><button class="dg" data-r="${x.id}">Revoke</button></tr>`).join('')+'</table>':'<div class="empty">No devices yet.</div>')+`<h3>Add device</h3><div class="f"><span>Name</span><input id=dn placeholder="Moon+ Reader on phone"></div><button class="p" id=da>Create key</button>`;
  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=async()=>{await send('device/'+b.dataset.r,'DELETE');go()});
  $('#da').onclick=async()=>{await send('device','POST',{name:$('#dn').value});go()}}
-go();
+const mb=n=>n==null?'-':n<1048576?Math.max(1,Math.round(n/1024))+' KB':n>=1073741824?(n/1073741824).toFixed(2)+' GB':(n/1048576).toFixed(1)+' MB';
+function dlg(msg,opts){return new Promise(res=>{const d=document.createElement('div');d.className='ov';d.innerHTML=`<div class="md dgl"><p>${msg}</p><div class="acts">${opts.map((o,n)=>`<button class="${o[1]||''}" data-n="${n}">${o[0]}</button>`).join('')}<button data-n="-1">Cancel</button></div></div>`;document.body.appendChild(d);d.onclick=e=>{const b=e.target.closest('button');if(b||e.target==d){d.remove();res(b?+b.dataset.n:-1)}}})}
+async function deleteFile(i,path,after){const o=i.monitored?[['Delete file and stop monitoring','dg'],['Delete file, keep monitoring (it will download again)','']]:[['Delete file','dg']];
+ const n=await dlg('Delete <b>'+esc(path.split('/').pop())+'</b> from disk? This cannot be undone.',o);if(n<0)return;
+ try{await send('item/'+i.id+'/file?path='+encodeURIComponent(path)+'&unmonitor='+(i.monitored&&n==0?1:0),'DELETE');toast('Deleted '+path.split('/').pop());after()}catch(e){toast(e.message,1)}}
+async function findSeries(o,i){o.innerHTML='<div class="empty">Looking up series…</div>';try{const r=(await api('lookup?term='+encodeURIComponent(i.series||i.title.replace(/\s*#?\d+\s*$/,''))+'&types=comic')).filter(x=>x.provider=='comicvine');
+ o.innerHTML=r.length?'<h3>Pick the series to monitor</h3>'+r.map((x,n)=>`<div class="rr2"><div><b>${esc(x.title)}</b><div class="mu">${esc([x.publisher,x.year,x.issues?x.issues+' issues':''].filter(Boolean).join(', '))}</div></div><button class="pu" data-s="${n}">Monitor series</button></div>`).join(''):'<div class="empty">No series found. Check your ComicVine key in Settings &gt; Metadata.</div>';
+ o.querySelectorAll('[data-s]').forEach(b=>b.onclick=async()=>{try{const x=await send('series','POST',r[b.dataset.s]);toast('Monitoring '+r[b.dataset.s].title+': '+x.added+' items added. Find it under Series.');itemPage(i.id)}catch(e){toast(e.message,1)}})}catch(e){o.innerHTML=`<div class="empty">${esc(e.message)}</div>`}}
+async function itemPage(id){chrome();REG=[];const m=$('#m');m.innerHTML='<div class="empty">Loading…</div>';let i;
+ try{i=await api('item/'+id)}catch(e){m.innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
+ const fs=i.files||[],ok=fs.some(f=>f.exists),s=i.status=='downloaded'&&ok?'have':i.status=='wanted'?'want':'',src='/api/v1/cover/'+i.id+'?apikey='+KEY;
+ m.innerHTML=`<p><a class="l" href="javascript:history.back()">&larr; Back</a></p><div class="ip"><div class="po"><img src="${src}" alt="" onerror="this.remove()"><span class="ph">${esc((i.title||'?').slice(0,2))}</span></div>
+ <div><h2>${esc(i.title)}</h2><p class="mu">${esc([i.type,i.author,i.series?i.series+(i.num?' #'+i.num:''):'',i.publisher,i.year,i.release_date].filter(Boolean).join(', '))}</p><p class="sb ${s}">${esc(stText(i))}</p><p>${esc(i.description||'No description yet.')}</p>
+ <div class="acts"><label class="ck"><input type="checkbox" id="mon" ${i.monitored?'checked':''}>Monitored</label><button class="p" id="rel">Search releases</button><button id="auto">Auto search</button>${i.type=='comic'&&!i.series_id?'<button class="pu" id="findser">Find series</button>':''}<button id="ref">Refresh metadata</button>${libExtra(i)}</div></div></div>
+ <h3>Files</h3>${fs.length?`<div class="tw"><table><tr><th>File<th>Format<th>Size<th>Added<th></tr>${fs.map((f,n)=>`<tr><td class="fi">${esc(f.name)}<small>${esc(f.folder)}</small>${f.exists?'':'<small style="color:#f08aa0">Not found on disk</small>'}<td>${esc(f.ext)}<td>${mb(f.size)}<td>${esc(f.modified||'-')}<td>${f.exists?`<a class="l" href="/api/v1/item/${i.id}/file?path=${encodeURIComponent(f.path)}&apikey=${KEY}">Download</a> `:''}<button class="dg" data-df="${n}">${f.exists?'Delete':'Clear'}</button></tr>`).join('')}</table></div>`:'<div class="mu">No file yet. It will appear here once a download finishes and is imported.</div>'}
+ <h3>History</h3>${i.history.length?'<div class="tw"><table><tr><th>Release<th>Status<th>Date</tr>'+i.history.map(h=>`<tr><td class="fi">${esc(h.title)}<td>${h.state=='sent'?'Downloading':h.state}${h.note?' ('+esc(h.note)+')':''}<td>${esc(h.created)}</tr>`).join('')+'</table></div>':'<div class="mu">Nothing downloaded through Bookarr yet.</div>'}
+ <div id="out"></div><h3>Remove</h3><button class="dg" id="del">Remove from Bookarr</button>`;
+ const q=x=>m.querySelector(x),msg=t=>toast(t);
+ q('#mon').onchange=e=>send('item/'+i.id,'PUT',{monitored:e.target.checked?1:0});q('#rel').onclick=()=>releases(q('#out'),i);
+ q('#auto').onclick=async()=>{toast('Searching…');try{const r=await send('item/'+i.id+'/search','POST');toast('Sent to your download client: '+r.release)}catch(e){toast(e.message,1)}};
+ q('#ref').onclick=async()=>{toast('Refreshing…');try{await send('item/'+i.id+'/refresh','POST');itemPage(i.id)}catch(e){toast(e.message,1)}};
+ if(q('#findser'))q('#findser').onclick=()=>findSeries(q('#out'),i);wireLib(m,i,msg);
+ m.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>deleteFile(i,fs[b.dataset.df].path,()=>itemPage(i.id)));
+ q('#del').onclick=async()=>{const n=await dlg('Remove <b>'+esc(i.title)+'</b> from Bookarr?',ok?[['Remove and delete the file','dg'],['Remove, keep the file','']]:[['Remove','dg']]);if(n<0)return;
+  try{await send('item/'+i.id+'?deleteFile='+(ok&&n==0?1:0),'DELETE');toast('Removed '+i.title);history.back()}catch(e){toast(e.message,1)}}}
+async function seriesPage(id){chrome();REG=[];const m=$('#m');m.innerHTML='<div class="empty">Loading…</div>';let d;
+ try{d=await api('series/'+id)}catch(e){m.innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
+ const sr=d.series,its=d.items;
+ m.innerHTML=`<p><a class="l" href="javascript:history.back()">&larr; Back</a></p><div class="ip"><div class="po">${sr.cover?`<img src="${esc(sr.cover)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc(sr.title.slice(0,2))}</span></div>
+ <div><h2>${esc(sr.title)}</h2><p class="mu">${esc([sr.type,sr.publisher,sr.year,(sr.have||0)+' of '+sr.total+' downloaded'].filter(Boolean).join(', '))}</p><p>${esc(sr.description||'')}</p>
+ <div class="acts"><label class="ck"><input type="checkbox" id="sm" ${sr.monitored?'checked':''}>Monitored</label><button class="p" id="ss">Search missing</button><button id="sf">Refresh issues</button><button class="dg" id="sd">Remove series</button></div></div></div>
+ <div class="tw"><table><tr><th>#<th>Title<th>Release date<th>Status<th>File<th></tr>${its.map(x=>{const f=x.path&&x.file_size!=null;return `<tr><td>${esc(x.num||'')}<td><a class="l" href="#/item/${x.id}">${esc(x.title)}</a><td>${esc(x.release_date||'')}<td>${f?'Downloaded':x.status=='wanted'?'Downloading':'Missing'}<td>${f?esc(x.path.split('.').pop().toUpperCase())+', '+mb(x.file_size):'-'}<td>${f?`<button class="dg" data-df="${x.id}">Delete file</button>`:''}</tr>`}).join('')}</table></div>`;
+ const q=x=>m.querySelector(x);q('#sm').onchange=e=>send('series/'+sr.id,'PUT',{monitored:e.target.checked?1:0});
+ q('#ss').onclick=async()=>{toast('Searching…');try{const r=await send('series/'+sr.id+'/search','POST');toast('Sent '+r.sent+' releases')}catch(e){toast(e.message,1)}};
+ q('#sf').onclick=async()=>{toast('Refreshing…');try{const r=await send('series/'+sr.id+'/refresh','POST');toast(r.added+' new items');seriesPage(sr.id)}catch(e){toast(e.message,1)}};
+ m.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const x=its.find(y=>y.id==b.dataset.df);deleteFile(x,x.path,()=>seriesPage(sr.id))});
+ q('#sd').onclick=async()=>{const n=await dlg('Remove <b>'+esc(sr.title)+'</b>? Downloaded files stay on disk.',[['Remove series','dg']]);if(n<0)return;await send('series/'+sr.id,'DELETE');toast('Series removed');history.back()}}
+function route(){const m=location.hash.match(/^#\/(item|series)\/(\d+)/);m?(m[1]=='item'?itemPage(+m[2]):seriesPage(+m[2])):go()}
+addEventListener('hashchange',route);route();
 </script></body></html>
