@@ -70,6 +70,14 @@ async def life(app):
     ts = [asyncio.create_task(auto_search_loop()), asyncio.create_task(import_loop()), asyncio.create_task(maint_loop())]; yield
     for t in ts: t.cancel()
 app = FastAPI(title="Bookarr", lifespan=life)
+from fastapi.responses import JSONResponse
+import traceback
+@app.exception_handler(Exception)
+async def unexpected(request: Request, e: Exception):
+    log.error("Error on %s: %s\n%s", request.url.path, e, "".join(traceback.format_exception(e)[-4:]))
+    msg = str(e) or e.__class__.__name__
+    if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 429: msg = "A metadata site is limiting requests right now (too many searches). Wait a few minutes, or add a free Google Books API key in Settings > Metadata."
+    return JSONResponse({"detail": f"Something went wrong: {msg}. Details are in Settings > Logs."}, status_code=500)
 
 @app.middleware("http")
 async def basic_auth(request: Request, call_next):
@@ -985,11 +993,24 @@ async def fetch_series_items(sr):
         else:
             p2 = {"q": f'inauthor:"{name}"', "maxResults": 40, "orderBy": "newest", "printType": "books"}
             if cfg("metadata")["googleBooksKey"]: p2["key"] = cfg("metadata")["googleBooksKey"]
-            j = await jget("https://www.googleapis.com/books/v1/volumes", params=p2)
-            for v in j.get("items", []):
-                a = gb_item(v, sr["type"])
-                if not a["title"] or not same(v["volumeInfo"].get("authors", [])) or norm(a["title"]) in seen or junk.search(a["title"]): continue
-                seen.add(norm(a["title"])); a["author"] = name; out.append(a)
+            try:
+                j = await jget("https://www.googleapis.com/books/v1/volumes", params=p2)
+                for v in j.get("items", []):
+                    a = gb_item(v, sr["type"])
+                    if not a["title"] or not same(v["volumeInfo"].get("authors", [])) or norm(a["title"]) in seen or junk.search(a["title"]): continue
+                    seen.add(norm(a["title"])); a["author"] = name; out.append(a)
+            except Exception as e:  # Google Books limits searches without an API key; Open Library below takes over
+                log.warning("Google Books author lookup for %s failed (%s); using Open Library", name, e)
+            if not out:
+                j = await jget("https://openlibrary.org/search.json", params={"author": name, "limit": 60, "sort": "new",
+                    "fields": "key,title,subtitle,author_name,first_publish_year,cover_i,subject,number_of_pages_median,language,isbn,ratings_average,ratings_count,publisher"})
+                for d in j.get("docs", []):
+                    if not same(d.get("author_name", [])) or norm(d["title"]) in seen or junk.search(d["title"]): continue
+                    seen.add(norm(d["title"]))
+                    out.append({"ext_id": d["key"], "title": d["title"], "author": name, "provider": "openlibrary", "release_date": str(d["first_publish_year"]) if d.get("first_publish_year") else None,
+                                "cover": f"https://covers.openlibrary.org/b/id/{d['cover_i']}-L.jpg" if d.get("cover_i") else None, "publisher": (d.get("publisher") or [None])[0],
+                                "meta": {"subjects": uniq(d.get("subject", []), 10), "pages": d.get("number_of_pages_median"), "isbn": (d.get("isbn") or [None])[0],
+                                         "rating": round(d["ratings_average"], 1) if d.get("ratings_average") else None, "ratings": d.get("ratings_count")}})
     return out
 def want_monitored(sr, release_date):
     mode = sr.get("mon_mode") or "all"
@@ -1039,8 +1060,10 @@ async def follow(b):
     sid = db.execute("INSERT INTO series(type,title,author,provider,ext_id,cover,description,year,publisher,mon_mode) VALUES(?,?,?,?,?,?,?,?,?,?)",
                      (b["type"], b["title"], b.get("author"), b.get("provider"), str(b.get("ext_id")), b.get("cover"), b.get("description"), b.get("year"), b.get("publisher"), mode)).lastrowid; db.commit()
     try: added = await sync_series(sid)
-    except Exception:
-        db.execute("DELETE FROM series WHERE id=?", (sid,)); db.commit(); raise
+    except Exception as e:
+        if b.get("provider") != "author":
+            db.execute("DELETE FROM series WHERE id=?", (sid,)); db.commit(); raise
+        log.warning("Following %s, but their book list could not be fetched yet: %s", b["title"], e); added = 0  # retried by the 12-hour refresh
     return sid, added, False
 @app.post("/api/v1/series", dependencies=API)
 async def add_series(request: Request):
@@ -1079,9 +1102,12 @@ async def add_flow(request: Request):
     out["id"] = iid
     if mode == "author" and b.get("author"):
         name = b["author"].split(",")[0].strip()
-        sid, added, existed = await follow({"type": b["type"], "title": name, "author": name, "provider": "author", "ext_id": name})
-        db.execute("UPDATE item SET series_id=COALESCE(series_id, ?) WHERE id=?", (sid, iid)); db.commit()
-        out["author"] = {"id": sid, "name": name, "added": added, "existing": existed}
+        try:
+            sid, added, existed = await follow({"type": b["type"], "title": name, "author": name, "provider": "author", "ext_id": name})
+            db.execute("UPDATE item SET series_id=COALESCE(series_id, ?) WHERE id=?", (sid, iid)); db.commit()
+            out["author"] = {"id": sid, "name": name, "added": added, "existing": existed}
+        except Exception as e:
+            log.warning("Could not follow %s: %s", name, e); out["author_error"] = f"Could not follow {name} right now ({e}). The book itself was added."
     it = rows("SELECT * FROM item WHERE id=?", (iid,))[0]
     if mode in ("search", "author") and it["status"] == "missing":  # already downloading or downloaded: do not grab twice
         try: out["release"] = await search_item(it)

@@ -18,7 +18,7 @@ main{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webki
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:20px}
 .pc{cursor:pointer}.pc b{display:block;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pc small{display:block;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .po{position:relative;aspect-ratio:2/3;background:linear-gradient(160deg,var(--g2),var(--g1));border:1px solid var(--line);border-radius:3px;overflow:hidden}
-.po img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.po .ph{position:absolute;inset:0;display:grid;place-items:center;font-size:34px;font-weight:700;color:#3a3d4d}
+.po img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}.po .tag,.po .bd,.po .bar{z-index:2}.po .ph{position:absolute;inset:0;display:grid;place-items:center;font-size:34px;font-weight:700;color:#3a3d4d}
 .po .tag{position:absolute;top:6px;left:6px;background:#000a;color:#fff;font-size:11px;padding:1px 7px;border-radius:3px}
 .po .bar{position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--line)}
 .have .bar{background:var(--te)}.want .bar{background:var(--bl)}.miss .bar{background:var(--pu)}.pc:hover .po,.pc:focus-visible .po{border-color:var(--pu)}
@@ -67,7 +67,7 @@ td.sort,th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--tx)}.x
 <div class="col"><header id="hd"></header><main id="m"></main></div>
 <script>
 const KEY=BOOKARR.apiKey,H={'X-Api-Key':KEY,'Content-Type':'application/json'};
-const api=(p,o={})=>fetch('/api/v1/'+p,{headers:H,...o}).then(async r=>{if(!r.ok)throw new Error((await r.json().catch(()=>({}))).detail||r.statusText);return r.json()});
+const api=(p,o={})=>fetch('/api/v1/'+p,{headers:H,...o}).then(async r=>{if(!r.ok){const d=(await r.json().catch(()=>({}))).detail;throw new Error((typeof d=='string'?d:d?JSON.stringify(d):'')||('Bookarr could not finish that (error '+r.status+(r.statusText?' '+r.statusText:'')+'). Check Settings > Logs for details.'))}return r.json()},e=>{throw new Error(e.message&&!/fetch/i.test(e.message)?e.message:'Could not reach Bookarr. Is the container running?')});
 const send=(p,m,b)=>api(p,{method:m,body:b?JSON.stringify(b):undefined});
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const store={get:(k,d)=>{try{return localStorage.getItem('bookarr.'+k)??d}catch(e){return d}},set:(k,v)=>{try{localStorage.setItem('bookarr.'+k,v)}catch(e){}}};
@@ -160,8 +160,8 @@ function modal(i){const d=document.createElement('div');d.className='ov';let bus
    if(mode=='series'){toast((r.existing?'Already following ':'Following ')+i.title+': '+r.added+' new issues. Missing ones download automatically.');close();location.hash='#/series/'+r.series_id;return}
    if(mode=='manual'){busy=0;btn.disabled=false;btn.textContent=old;toast('Added and monitored. Pick a release below.');return releases(q('#out'),{...i,id:r.id})}
    let t=(r.existing?'Already in your library. ':'Added. ')+(r.release?'Downloading: '+r.release+'.':r.search_error?'Saved, but the search failed: '+r.search_error:'No release found yet; Bookarr will keep checking.');
-   if(r.author)t+=` Following ${r.author.name}`+(r.author.added?` (${r.author.added} other books listed; new ones download automatically).`:'.');
-   toast(t,!!r.search_error);close();location.hash='#/item/'+r.id}catch(e){busy=0;btn.disabled=false;btn.textContent=old;toast(e.message,1)}};
+   if(r.author)t+=` Following ${r.author.name}`+(r.author.added?` (${r.author.added} other books listed; new ones download automatically).`:'.');if(r.author_error)t+=' '+r.author_error;
+   toast(t,!!(r.search_error||r.author_error));close();location.hash='#/item/'+r.id}catch(e){busy=0;btn.disabled=false;btn.textContent=old;toast(e.message,1)}};
  if(q('#a-search'))q('#a-search').onclick=e=>run('search',e.target);if(q('#a-author'))q('#a-author').onclick=e=>run('author',e.target);
  if(q('#a-series'))q('#a-series').onclick=e=>run('series',e.target);q('#a-manual').onclick=e=>run('manual',e.target)};
  document.body.appendChild(d);i._loading=1;draw();
