@@ -291,19 +291,82 @@ async def prowlarr(term, mtype):
     if r.status_code in (401, 403): raise HTTPException(502, "Prowlarr rejected the API key. Check it in Settings > Indexers.")
     if r.status_code != 200: raise HTTPException(502, f"Prowlarr returned {r.status_code}. Check the URL in Settings > Indexers.")
     return [{"title": i["title"], "type": mtype, "size": i.get("size", 0), "seeders": i.get("seeders"), "indexer": i.get("indexer"),
-             "protocol": i.get("protocol"), "downloadUrl": i.get("downloadUrl") or i.get("magnetUrl"), "publishDate": i.get("publishDate")} for i in r.json()]
+             "protocol": i.get("protocol"), "downloadUrl": i.get("downloadUrl") or i.get("magnetUrl"), "publishDate": i.get("publishDate"),
+             "infoUrl": i.get("infoUrl") or (i.get("guid") if str(i.get("guid", "")).startswith("http") else None), "files": i.get("files"), "grabs": i.get("grabs")} for i in r.json()]
 
 def age_days(v):
     try: return max(0, (datetime.now(timezone.utc) - datetime.fromisoformat(v.replace("Z", "+00:00"))).days)
     except Exception: return None
 @app.get("/api/v1/search", dependencies=API)
-async def search(term: str, types: str = "comic,ebook,audiobook", strict: int = 1):
+async def search(term: str, types: str = "comic,ebook,audiobook", strict: int = 1, item_id: int = None):
     res = await asyncio.gather(*[prowlarr(term, t) for t in types.split(",") if t in TYPES]); out = []; hidden = 0
+    it = (rows("SELECT * FROM item WHERE id=?", (item_id,)) or [None])[0] if item_id else None
     for r in (x for g in res for x in g):
         r["score"] = relevance(term, r["title"]); r["age"] = age_days(r.get("publishDate"))
+        r["fmt"] = detect_fmt(r["title"], r["type"]); r["pack"] = is_pack(term, r["title"])
+        r["skip"] = skip_reason(r, it, term)
         if strict and r["score"] == 0: hidden += 1
         else: out.append(r)
-    return {"results": sorted(out, key=lambda r: (-r["score"], -(r["seeders"] or 0))), "hidden": hidden}
+    ok = [r for r in out if not r["skip"]]
+    if ok: min(ok, key=lambda r: pick_key(r, term)).update(pick=True)  # the one "Search releases" / auto search would grab
+    order = " → ".join(sorted({f.strip().upper() for t in types.split(",") if t in TYPES for f in cfg("quality")[t].split(",") if f.strip()}, key=lambda f: min(
+        [cfg("quality")[t].upper().replace(" ", "").split(",").index(f) for t in types.split(",") if t in TYPES and f in cfg("quality")[t].upper().replace(" ", "").split(",")] or [9])))
+    return {"results": sorted(out, key=lambda r: (not r.get("pick"), -r["score"], -(r["seeders"] or 0))), "hidden": hidden, "order": order}
+
+# ---------- peek inside a release before downloading (reads the NZB or .torrent file list) ----------
+def bdecode(b, i=0):
+    c = b[i:i + 1]
+    if c == b"i": j = b.index(b"e", i); return int(b[i + 1:j]), j + 1
+    if c == b"l":
+        i += 1; out = []
+        while b[i:i + 1] != b"e": v, i = bdecode(b, i); out.append(v)
+        return out, i + 1
+    if c == b"d":
+        i += 1; out = {}
+        while b[i:i + 1] != b"e": k, i = bdecode(b, i); v, i = bdecode(b, i); out[k] = v
+        return out, i + 1
+    j = b.index(b":", i); n = int(b[i:j]); return b[j + 1:j + 1 + n], j + 1 + n
+def nzb_files(data):
+    import xml.etree.ElementTree as ET
+    out = []
+    for f in ET.fromstring(data).iter():
+        if not f.tag.endswith("}file") and f.tag != "file": continue
+        subj = f.get("subject", ""); m = re.search(r'"([^"]+)"', subj)
+        name = m.group(1) if m else subj
+        size = sum(int(sg.get("bytes", 0)) for sg in f.iter() if sg.tag.endswith("segment"))
+        out.append({"name": name, "size": size})
+    return out
+def torrent_files(data):
+    info = bdecode(data)[0][b"info"]; base = info.get(b"name", b"").decode("utf-8", "replace")
+    if b"files" in info: return [{"name": "/".join(x.decode("utf-8", "replace") for x in f[b"path"]), "size": f[b"length"]} for f in info[b"files"]]
+    return [{"name": base, "size": info.get(b"length", 0)}]
+JUNK = re.compile(r"\.(par2|nfo|sfv|nzb|txt|url|jpg|jpeg|png|db)$|^sample", re.I)
+@app.post("/api/v1/release/peek", dependencies=API)
+async def release_peek(request: Request):
+    b = await request.json(); url = b.get("downloadUrl") or ""
+    magnet = "This torrent is only a magnet link, so its file list is not known until qBittorrent starts it."
+    if url.startswith("magnet:"): return {"files": [], "message": magnet}
+    try:
+        async with httpx.AsyncClient(timeout=30, headers=UA) as x:
+            r = await x.get(url); hops = 0
+            while r.status_code in (301, 302, 303, 307, 308) and hops < 5:
+                loc = r.headers.get("location", "")
+                if loc.startswith("magnet:"): return {"files": [], "message": magnet}
+                r = await x.get(str(r.url.join(loc))); hops += 1
+    except httpx.HTTPError as e: raise HTTPException(502, f"Could not fetch the release from the indexer: {e}")
+    if r.status_code != 200: raise HTTPException(502, f"The indexer answered HTTP {r.status_code}. You may have reached its daily download limit.")
+    data = r.content
+    try: fs = nzb_files(data) if b"<nzb" in data[:4000] else torrent_files(data) if data[:1] == b"d" else None
+    except Exception: fs = None
+    if fs is None: raise HTTPException(502, "The indexer did not send a file list Bookarr can read.")
+    fs.sort(key=lambda f: -f["size"]); main = [f for f in fs if not JUNK.search(f["name"])]
+    exts = collections.Counter(pathlib.Path(f["name"]).suffix.lower().lstrip(".") or "?" for f in main)
+    packed = any(re.search(r"\.(rar|r\d\d|7z|zip|part\d+\.rar)$", f["name"], re.I) for f in main)
+    obf = main and all(re.fullmatch(r"[a-z0-9]{16,}(\.\w+)?", pathlib.Path(f["name"]).name, re.I) for f in main)
+    msg = ("Files are scrambled names (common on usenet), so the real names show up after downloading. " if obf else "") + \
+          ("The book is packed inside an archive (RAR/ZIP); the downloader unpacks it, so the exact book files only show after downloading. " if packed else "")
+    return {"files": fs[:200], "count": len(fs), "summary": ", ".join(f"{n} × {e.upper()}" for e, n in exts.most_common(6)), "message": msg.strip(),
+            "extras": len(fs) - len(main)}
 @app.post("/api/v1/release", dependencies=API)
 async def grab(request: Request):
     b = await request.json(); return {"ok": True, "client": await send_to_client(b, b["type"], b.get("item_id"))}
@@ -776,6 +839,29 @@ def terms(it):
 STOP = {"the", "a", "an", "of", "and", "comic", "comics", "ebook", "audiobook"}
 toks = lambda v: re.findall(r"[a-z0-9]+", (v or "").lower().replace("&", " and "))
 PACK = re.compile(r"\b(complete|collection|collections|pack|bundle|omnibus|megapack|library)\b|\d{1,4}\s*-\s*\d{1,4}", re.I)
+PACKWORDS = re.compile(r"\b(complete|collection|collections|pack|bundle|omnibus|megapack|library|books|novels|anthology|box ?set|boxset|series|trilogy|saga|works)\b", re.I)
+def is_pack(term, title):
+    """A release that probably holds several books (e.g. "Romance books - ..."), not counting words that are part of what you searched for."""
+    q = set(toks(term))
+    return any(not set(toks(m.group(0))) <= q for m in PACKWORDS.finditer(title)) or bool(re.search(r"\b\d{1,4}\s*-\s*\d{1,4}\b", title) and not re.search(r"\d\s*-\s*\d", term))
+FMTS = {"comic": ["cbz", "cbr", "cb7", "pdf", "epub"], "ebook": ["epub", "azw3", "mobi", "pdf", "kepub", "azw", "fb2", "txt"], "audiobook": ["m4b", "mp3", "m4a", "flac", "aac"]}
+def detect_fmt(title, t):
+    f = [x.upper() for x in FMTS.get(t, []) if re.search(rf"\b{x}\b", title.lower())]
+    return ", ".join(f) or None
+def skip_reason(r, it, term):
+    """Why automatic grabbing would pass over this release (None = it is allowed)."""
+    q = cfg("quality"); t = r["type"]; cap = (q.get(t + "MaxMB") or 0) * 1048576
+    if not r.get("downloadUrl"): return "No download link"
+    if rows("SELECT 1 FROM blocklist WHERE title=?", (r["title"],)): return "Failed before (blocklisted)"
+    if it and not matches(it, r): return "Does not match this title closely enough"
+    if not it and relevance(term, r["title"]) == 0: return "Does not match the search closely enough"
+    if cap and (r["size"] or 0) > cap: return f"Bigger than your {q.get(t + 'MaxMB')} MB limit"
+    if r.get("seeders") is not None and r["seeders"] < cfg("media")["minSeeders"]: return "Not enough seeders"
+    if q.get("requirePreferred") and fmt_rank(r["title"], t) >= len(q[t].split(",")): return "Not one of your preferred formats"
+    return None
+def pick_key(r, term):
+    # single book first, then your preferred format order (Settings > Quality), then most seeders, then newest
+    return (is_pack(term, r["title"]), fmt_rank(r["title"], r["type"]), -(r.get("seeders") or 0), r.get("age") if r.get("age") is not None else 99999)
 def relevance(term, title):
     """0 = not a match. Every word in the search must be in the release and every number must be a number in it (so 'Deadpool 5' skips 'Deadpool 50')."""
     q = [t for t in toks(term) if t not in STOP]
@@ -800,7 +886,8 @@ async def search_item(it):
               and (r["seeders"] is None or r["seeders"] >= cfg("media")["minSeeders"])]
         if q.get("requirePreferred"): rs = [r for r in rs if fmt_rank(r["title"], it["type"]) < len(q[it["type"]].split(","))]
         if rs:
-            rs.sort(key=lambda r: (fmt_rank(r["title"], it["type"]), -(r["seeders"] or 0)))
+            for r in rs: r["age"] = age_days(r.get("publishDate"))
+            rs.sort(key=lambda r: pick_key(r, term))
             await send_to_client(rs[0], it["type"], it["id"]); return rs[0]["title"]
     return None
 def due():
