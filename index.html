@@ -7,14 +7,14 @@ nav{width:210px;flex:none;background:var(--black);border-right:1px solid var(--l
 .logo{display:flex;gap:10px;align-items:center;font-size:18px;font-weight:700;padding:4px 18px 18px}
 nav a{display:block;padding:9px 18px;color:var(--mu);cursor:pointer;border-left:3px solid transparent}nav a:hover{color:var(--tx);background:var(--g1)}
 nav a.on{color:var(--tx);background:var(--g1);border-left-color:var(--pu)}nav hr{border:0;border-top:1px solid var(--line);margin:10px 0;width:100%}
-.col{flex:1;display:flex;flex-direction:column;min-width:0}
+.col{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
 header{background:var(--g1);border-bottom:1px solid var(--line);padding:10px 24px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 header h1{font-size:18px;margin:0 8px 0 0;font-weight:600}header .sp{flex:1}
 input,select,button{background:var(--g2);color:var(--tx);border:1px solid var(--line);border-radius:4px;padding:7px 10px;font:inherit}
 input::placeholder{color:#666a7a}button{cursor:pointer}button:hover{border-color:#464a5b}button.p{background:var(--te);border-color:var(--te);color:#04201c;font-weight:600}
 button.pu{background:var(--pu);border-color:var(--pu);color:#fff}button.dg{color:#f08aa0}:focus-visible{outline:2px solid var(--bl);outline-offset:1px}
 header input[type=search]{width:min(320px,100%)}label.ck{color:var(--mu);display:flex;gap:5px;align-items:center;cursor:pointer}label.ck input{accent-color:var(--pu)}
-main{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px;min-width:0}
+main{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px;min-width:0;min-height:0}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:20px}
 .pc{cursor:pointer}.pc b{display:block;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pc small{display:block;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .po{position:relative;aspect-ratio:2/3;background:linear-gradient(160deg,var(--g2),var(--g1));border:1px solid var(--line);border-radius:3px;overflow:hidden}
@@ -41,12 +41,18 @@ a.l{color:var(--bl)}.msg{color:var(--te);margin-left:10px}
 .rr .t{overflow-wrap:anywhere}.rr .c{color:var(--mu)}.rsort{display:none}.rr2{display:flex;gap:12px;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:min(560px,92vw);background:var(--g2);border:1px solid var(--te);border-radius:6px;padding:11px 16px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}
 .toast.show{opacity:1}.toast.bad{border-color:#f08aa0}
-@media(max-width:760px){body{flex-direction:column}nav{width:100%;flex:none;flex-direction:row;overflow-x:auto;padding:0;border-right:0;border-bottom:1px solid var(--line);overscroll-behavior-x:contain;scrollbar-width:none}nav::-webkit-scrollbar{display:none}
+@media(max-width:760px){html{height:auto;overflow:visible;overscroll-behavior:auto}body{display:block;height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:visible}.col{display:block}main{overflow:visible;min-height:0}
+ nav{position:sticky;top:0;z-index:6;width:100%;flex:none;flex-direction:row;overflow-x:auto;padding:0;border-right:0;border-bottom:1px solid var(--line);overscroll-behavior-x:contain;scrollbar-width:none}nav::-webkit-scrollbar{display:none}
  .logo,nav hr{display:none}nav a{border-left:0;border-bottom:3px solid transparent;white-space:nowrap;padding:12px 14px}nav a.on{border-bottom-color:var(--pu)}
  header{padding:10px 12px;gap:8px}header h1,header .sp{display:none}header input[type=search]{flex:1 1 100%;width:100%}
  input,select{font-size:16px}button{min-height:40px}main{padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
  .grid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:12px}.f{grid-template-columns:1fr}.mh{grid-template-columns:96px 1fr;gap:12px}
  .ov{padding:0;align-items:stretch}.md{width:100%;max-height:100dvh;height:100dvh;border-radius:0;padding:14px}main table{display:block;overflow-x:auto}
+ .tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.tabs button{white-space:nowrap}.bar2 input,.bar2 select{flex:1 1 150px;width:auto}.bar2 .sp{display:none}
+ .acts button,.acts a{flex:1 1 auto}.dlbox{margin:0 0 12px}.toast{bottom:calc(12px + env(safe-area-inset-bottom))}
+ main table.cards{display:block;overflow:visible}.cards tbody{display:block}.cards tr:first-child{display:none}
+ .cards tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;padding:12px 2px;border-bottom:1px solid var(--line)}.cards td{border:0;padding:0;min-width:0}
+ .cards td.fi{flex:1 1 100%;font-weight:500}.cards td:has(.pb){flex:1 1 100%}.cards .fold{display:none}.cards td:last-child{margin-left:auto}.cards .cv{flex-wrap:wrap}
  .rr.rh{display:none}.rsort{display:block;margin:0 0 8px;width:100%}.rr{display:flex;flex-wrap:wrap;gap:2px 12px;padding:12px 4px}.rr .t{flex:1 1 100%}.rr .c{font-size:12px}.rr .b{margin-left:auto}}
 .ip{display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;margin-bottom:24px}.ip .po{width:100%}.fi{overflow-wrap:anywhere}.fi small{display:block;color:var(--mu)}
 .dgl{max-width:480px;height:auto!important;align-self:center}h3{margin:24px 0 8px}
@@ -81,16 +87,19 @@ let flt='all',RSORT={k:'score',d:-1},RFILT='all',STRICT=1,HFILT='all';
 let view='main',term='',sub='clients',types={comic:1,ebook:1,audiobook:1},REG=[];
 const LOGO='<svg width="26" height="26" viewBox="0 0 26 26"><rect width="26" height="26" rx="6" fill="#8b5cf6"/><path d="M7 6h9a3 3 0 013 3v11H10a3 3 0 01-3-3z" fill="none" stroke="#2dd4bf" stroke-width="2"/><path d="M11 11h5" stroke="#fff" stroke-width="2"/></svg>';
 const baseType=v=>v.split('-')[0];
+function nav(h){if(location.hash==h)route();else location.hash=h}
+function toTop(){try{window.scrollTo(0,0)}catch(e){}const m=$('#m');if(m)m.scrollTop=0}
+function centerNav(){const n=$('#nav'),a=n&&n.querySelector('a.on');if(a&&n.scrollWidth>n.clientWidth)n.scrollLeft=a.offsetLeft-n.clientWidth/2+a.clientWidth/2}
 const hsh=t=>{let h=0;for(const c of String(t||''))h=(h*31+c.charCodeAt(0))|0;return (h>>>0).toString(36)};
 const coverUrl=i=>'/api/v1/cover/'+i.id+'?apikey='+KEY+'&v='+hsh((i.cover||'')+'|'+(i.path||''));
 const KN={sabnzbd:'SABnzbd',qbittorrent:'qBittorrent'};
 const pbar=p=>`<div class="pb"><i style="width:${Math.max(2,Math.min(100,p||0))}%"></i></div>`;
 let LPOLL=0;
-function chrome(){$('#nav').innerHTML=`<div class="logo">${LOGO}Bookarr</div>`+NAV.map(n=>n=='-'?'<hr>':`<a tabindex=0 class="${view==n[0]?'on':''} ${n[2]?'sub':''}" data-k="${n[0]}">${n[1]}</a>`).join('');
- document.querySelectorAll('nav a').forEach(a=>{a.onclick=()=>{view=a.dataset.k;term='';history.replaceState(null,'',location.pathname);go()};a.onkeydown=e=>{if(e.key=='Enter')a.click()}});
+function chrome(){setTimeout(centerNav,0);$('#nav').innerHTML=`<div class="logo">${LOGO}Bookarr</div>`+NAV.map(n=>n=='-'?'<hr>':`<a tabindex=0 class="${view==n[0]?'on':''} ${n[2]?'sub':''}" data-k="${n[0]}">${n[1]}</a>`).join('');
+ document.querySelectorAll('nav a').forEach(a=>{a.onclick=()=>nav('#/'+a.dataset.k);a.onkeydown=e=>{if(e.key=='Enter')a.click()}});
  $('#hd').innerHTML=`<h1>${TITLE[view]||'Bookarr'}</h1><span class="sp"></span><input type="search" id="q" placeholder="Find a book, comic or audiobook to add" value="${esc(term)}">
  ${Object.keys(types).map(t=>`<label class="ck"><input type="checkbox" data-t="${t}" ${types[t]?'checked':''}>${TN[t]}</label>`).join('')}<button class="p" id="go">Search</button>`;
- const run=()=>{term=$('#q').value.trim();history.replaceState(null,'',location.pathname);go()};$('#go').onclick=run;$('#q').onkeydown=e=>{if(e.key=='Enter')run()};
+ const run=()=>{const t=$('#q').value.trim();nav('#/'+(view.startsWith('settings')||['system','activity','calendar'].includes(view)?'main':view)+(t?'?q='+encodeURIComponent(t):''))};$('#go').onclick=run;$('#q').onkeydown=e=>{if(e.key=='Enter')run()};
  document.querySelectorAll('[data-t]').forEach(c=>c.onchange=()=>types[c.dataset.t]=c.checked?1:0)}
 const st=i=>i.status=='downloaded'?'have':i.status=='wanted'?'want':i.monitored?'miss':'off';
 const BL={have:'Downloaded',want:'Downloading',miss:'Missing',off:'Not monitored'};
@@ -134,11 +143,11 @@ async function go(){clearTimeout(LPOLL);clearTimeout(POLL);chrome();REG=[];const
   drawLib(m,it)
  }catch(e){m.innerHTML=`<div class="empty">${esc(e.message)}</div>`}}
 // ---------- activity: queue + history with clearing ----------
-async function activityView(m){const [q,hs]=await Promise.all([api('queue'),api('history')]);clearTimeout(LPOLL);if(q.length)LPOLL=setTimeout(()=>{if(view=='activity'&&!location.hash.startsWith('#/')&&$('#chk'))activityView(m)},6000);
+async function activityView(m){const [q,hs]=await Promise.all([api('queue'),api('history')]);clearTimeout(LPOLL);if(q.length)LPOLL=setTimeout(()=>{if(view=='activity'&&location.hash.startsWith('#/activity')&&$('#chk'))activityView(m)},6000);
  const HF={all:()=>1,sent:x=>x.state=='sent',imported:x=>x.state=='imported',failed:x=>x.state=='failed'},hv=hs.filter(HF[HFILT]);
- m.innerHTML=`<div class="acts"><button class="p" id="chk">Check downloads now</button></div><h3>Downloading now</h3>`+(q.length?'<div class="tw"><table><tr><th>Title<th>From<th style="width:32%">Progress<th>Status</tr>'+q.map(x=>`<tr><td class="fi">${x.item_id?`<a class="l" href="#/item/${x.item_id}">${esc(x.title)}</a>`:esc(x.title)}<td>${esc(x.kind)}${x.client!=x.kind?`<small class="mu"> (${esc(x.client)})</small>`:''}<td>${x.progress!=null?pbar(x.progress)+`<small class="mu">${Math.floor(x.progress)}%${x.eta?' · '+esc(x.eta)+' left':''}${x.speed?' · '+esc(x.speed):''}</small>`:'<span class="mu">-</span>'}<td>${esc(x.status)}${x.problem?`<small class="bad">Could not finish: ${esc(x.problem)}</small>`:''}</tr>`).join('')+'</table></div>':'<div class="mu">Nothing downloading.</div>')+
+ m.innerHTML=`<div class="acts"><button class="p" id="chk">Check downloads now</button></div><h3>Downloading now</h3>`+(q.length?'<div class="tw"><table class="cards"><tr><th>Title<th>From<th style="width:32%">Progress<th>Status</tr>'+q.map(x=>`<tr><td class="fi">${x.item_id?`<a class="l" href="#/item/${x.item_id}">${esc(x.title)}</a>`:esc(x.title)}<td>${esc(x.kind)}${x.client!=x.kind?`<small class="mu"> (${esc(x.client)})</small>`:''}<td>${x.progress!=null?pbar(x.progress)+`<small class="mu">${Math.floor(x.progress)}%${x.eta?' · '+esc(x.eta)+' left':''}${x.speed?' · '+esc(x.speed):''}</small>`:'<span class="mu">-</span>'}<td>${esc(x.status)}${x.problem?`<small class="bad">Could not finish: ${esc(x.problem)}</small>`:''}</tr>`).join('')+'</table></div>':'<div class="mu">Nothing downloading.</div>')+
  `<h3>History</h3><div class="bar2"><div class="chips">${[['all','All'],['sent','Downloading'],['imported','Imported'],['failed','Failed']].map(([k,l])=>`<button class="${HFILT==k?'on':''}" data-h="${k}">${l} (${hs.filter(HF[k]).length})</button>`).join('')}</div><span class="sp"></span>${hs.length?'<button class="dg" id="clr">Clear history</button>':''}</div>`+
- (hv.length?'<div class="tw"><table><tr><th>Release<th>Type<th>From<th>Status<th>Date<th></tr>'+hv.map(x=>`<tr><td class="fi">${esc(x.title)}<td>${x.type}<td>${esc(KN[x.client_kind]||'-')}<td>${x.state=='sent'?(x.note?'Could not finish':'Downloading'):x.state=='imported'?'Imported':x.state=='failed'?'Failed':esc(x.state)}${x.note?'<small class="mu"> '+esc(x.note)+'</small>':''}<td>${esc(x.created)}<td><button class="x1" title="Remove from history" data-hd="${x.id}">✕</button></tr>`).join('')+'</table></div>':'<div class="mu">No downloads here.</div>');
+ (hv.length?'<div class="tw"><table class="cards"><tr><th>Release<th>Type<th>From<th>Status<th>Date<th></tr>'+hv.map(x=>`<tr><td class="fi">${esc(x.title)}<td>${x.type}<td>${esc(KN[x.client_kind]||'-')}<td>${x.state=='sent'?(x.note?'Could not finish':'Downloading'):x.state=='imported'?'Imported':x.state=='failed'?'Failed':esc(x.state)}${x.note?'<small class="mu"> '+esc(x.note)+'</small>':''}<td>${esc(x.created)}<td><button class="x1" title="Remove from history" data-hd="${x.id}">✕</button></tr>`).join('')+'</table></div>':'<div class="mu">No downloads here.</div>');
  $('#chk').onclick=async()=>{toast('Checking downloads…');await send('command/checkdownloads','POST');go()};
  m.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{HFILT=b.dataset.h;activityView(m)});
  m.querySelectorAll('[data-hd]').forEach(b=>b.onclick=async()=>{await send('history/'+b.dataset.hd,'DELETE');activityView(m)});
@@ -222,7 +231,7 @@ const NOTES={library:'<p class="note">Downloads stay in your downloads folder wh
  converter:'<p class="note">Bookarr uses your <b>Transmute</b> server to turn files into other formats: ebooks (EPUB, AZW3, MOBI, PDF, KEPUB, FB2), comics (CBZ, PDF) and audiobooks (M4B, MP3, M4A). Converted copies are saved next to the original, so both show on the book\'s page.<br>Address: the local one works best, like <b>http://192.168.0.185:3313</b>. API key: in Transmute open Settings &gt; API keys and create one.</p>'};
 const SUBS=[['clients','Download clients'],['indexer','Indexers'],['media','Media'],['quality','Quality'],['metadata','Metadata'],['converter','Converter'],['email','Kindle'],['notifications','Notifications'],['library','Library'],['security','Security'],['devices','Reader devices'],['general','General'],['logs','Logs']];
 async function settings(m){m.innerHTML=`<div class="tabs">${SUBS.map(([k,l])=>`<button class="${sub==k?'on':''}" data-s="${k}">${l}</button>`).join('')}</div><div id="out"></div>`;
- document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{sub=b.dataset.s;go()});const o=$('#out');
+ document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>nav('#/settings/'+b.dataset.s));const o=$('#out');
  if(sub=='logs'){const l=await api('log');o.innerHTML='<div class="tw"><table>'+l.map(x=>`<tr><td>${esc(x.time)}<td>${x.level}<td class="fi">${esc(x.message)}</tr>`).join('')+'</table></div>';return}
  if(sub=='devices')return await devicesView(o);
  if(sub=='clients')return await clientsView(o);
@@ -249,8 +258,10 @@ async function clientsView(o){const c=await api('downloadclient');
  const body=()=>({name:$('#n').value,kind:$('#k').value,url:$('#u').value,apikey:$('#a').value,username:$('#us').value,password:$('#pw').value,category:$('#c').value});
  $('#tst').onclick=async()=>{$('#res').textContent='Checking…';$('#res').style.color='';try{show($('#res'),await send('downloadclient/test','POST',body()))}catch(e){show($('#res'),{ok:0,message:e.message})}};
  $('#add').onclick=async()=>{try{const r=await (editId?send('downloadclient/'+editId,'PUT',body()):send('downloadclient','POST',body()));toast(r.ok?(editId?'Saved. ':'Added. ')+r.message:(editId?'Saved, but the connection check failed: ':'Added, but the connection check failed: ')+r.message,!r.ok);go()}catch(e){toast(e.message,1)}}}
-function closeSearch(){term='';const q=$('#q');if(q)q.value='';go()}
-document.addEventListener('keydown',e=>{if(e.key=='Escape'&&!document.querySelector('.ov')){if(term&&!location.hash.startsWith('#/'))return closeSearch();const c=document.querySelector('#relx');if(c)c.click()}});
+function closeSearch(){nav('#/'+view)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-back]');if(!b)return;e.preventDefault();if(history.length>1&&BACKOK)history.back();else nav('#/'+view)});
+let BACKOK=0;addEventListener('hashchange',()=>{BACKOK=1});
+document.addEventListener('keydown',e=>{if(e.key=='Escape'&&!document.querySelector('.ov')){if(term&&!/^#\/(item|series)\//.test(location.hash))return closeSearch();const c=document.querySelector('#relx');if(c)c.click()}});
 document.addEventListener('keydown',e=>{if(e.key=='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){e.preventDefault();$('#q')?.focus()}});
 // ---------- followed authors / series ----------
 const FSORT=[['title','Name A–Z'],['added','Recently followed'],['wanted','Most still wanted'],['total','Most books'],['latest','Newest release']];
@@ -291,22 +302,22 @@ async function findSeries(o,i){o.innerHTML='<div class="empty">Looking up series
  o.querySelectorAll('[data-s]').forEach(b=>b.onclick=async()=>{try{const x=await send('series','POST',r[b.dataset.s]);toast('Monitoring '+r[b.dataset.s].title+': '+x.added+' items added.');itemPage(i.id)}catch(e){toast(e.message,1)}})}catch(e){o.innerHTML=`<div class="empty">${esc(e.message)}</div>`}}
 // ---------- a title in your library ----------
 let POLL=0;
-async function itemPage(id){chrome();REG=[];clearTimeout(POLL);const m=$('#m');if(!m.dataset.keep)m.innerHTML='<div class="empty">Loading…</div>';let i,jobs,dl=[];
+async function itemPage(id){clearTimeout(POLL);clearTimeout(LPOLL);const keep=$('#m').dataset.keep;chrome();REG=[];const m=$('#m');if(!keep){m.innerHTML='<div class="empty">Loading…</div>';toTop()}let i,jobs,dl=[];
  try{[i,jobs,dl]=await Promise.all([api('item/'+id),api('convert/jobs?item='+id).catch(()=>[]),api('queue?item='+id).catch(()=>[])])}catch(e){m.innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
  const fs=i.files||[],ok=fs.some(f=>f.exists),s=i.status=='downloaded'&&ok?'have':i.status=='wanted'?'want':'',src=coverUrl(i),fw=i.follow[0],kin=ok&&i.type!='audiobook';
- const running=jobs.filter(j=>j.state=='running');$('#hd h1').textContent=TN[i.type];
- m.innerHTML=`<p><a class="l" href="javascript:history.back()">&larr; Back</a></p><div class="ip"><div class="po"><img src="${src}" alt="" onerror="this.remove()"><span class="ph">${esc((i.title||'?').slice(0,2))}</span></div>
+ if(T1[i.type]&&baseType(view)!=i.type){view=i.type;term='';chrome()}const running=jobs.filter(j=>j.state=='running');$('#hd h1').textContent=TN[i.type];
+ m.innerHTML=`<p><a class="l" href="#" data-back>&larr; Back</a></p><div class="ip"><div class="po"><img src="${src}" alt="" onerror="this.remove()"><span class="ph">${esc((i.title||'?').slice(0,2))}</span></div>
  <div><h2>${esc(i.title)}</h2>${i.meta.subtitle?`<p class="mu" style="margin-top:-4px">${esc(i.meta.subtitle)}</p>`:''}<p class="mu">${esc([TN[i.type].replace(/s$/,''),i.author,i.series?i.series+(i.num?' #'+i.num:''):'',i.year].filter(Boolean).join(' · '))}</p><p class="sb ${s}">${esc(stText(i))}</p>${dl.map(x=>`<div class="dlbox">${x.progress!=null?pbar(x.progress):''}<div><b>${esc(x.status)}</b>${x.progress!=null&&x.progress<100?` · ${Math.floor(x.progress)}%`:''}${x.eta?' · '+esc(x.eta)+' left':''}${x.speed?' · '+esc(x.speed):''}<span class="mu"> · via ${esc(x.kind)}${x.client!=x.kind?' ('+esc(x.client)+')':''}</span></div>${x.problem?`<div class="bad">It finished downloading, but Bookarr could not move it into your library: ${esc(x.problem)}. Bookarr retries every minute.</div>`:''}</div>`).join('')}
  ${fw?`<p class="mu">${fw.provider=='author'?'Following author':'Part of series'} <a class="l" href="#/series/${fw.id}">${esc(fw.title)}</a></p>`:''}
  <div class="acts"><label class="ck"><input type="checkbox" id="mon" ${i.monitored?'checked':''}>Monitored</label>${i.status=='missing'?'<button class="p" id="auto">Search releases</button>':''}<button id="rel">Pick a release myself</button>
  ${!fw&&i.author&&i.type!='comic'?'<button class="pu" id="fol">Monitor author</button>':''}${i.type=='comic'&&!i.series_id?'<button class="pu" id="findser">Find series</button>':''}<button id="ref">Refresh metadata</button></div>
  ${kin?`<div class="acts"><button id="kindle">Send to Kindle</button><a href="/api/v1/item/${i.id}/kindle?apikey=${KEY}" id="kdl"><button>Download for Kindle</button></a>${i.path&&/\.(cbz|m4b)$/i.test(i.path)?'<button id="tags">Write tags</button>':''}</div>`:''}</div></div>
  <h3>Synopsis</h3>${synopsis(i.description)}<h3>Details</h3>${details(i)}
- <h3>Files</h3>${fs.length?`<div class="tw"><table><tr><th>File<th>Format<th>Size<th>Details<th>Added<th></tr>${fs.map((f,n)=>`<tr><td class="fi">${esc(f.name)}<small>${esc(f.folder)}</small>${f.exists?'':'<small style="color:#f08aa0">Not found on disk</small>'}<td>${esc(f.ext)}${f.primary&&fs.length>1?' <small class="mu">original</small>':''}<td>${mb(f.size)}<td class="mu">${esc(f.info||'')}<td>${esc(f.modified||'-')}<td>${f.exists?`<a class="l" href="/api/v1/item/${i.id}/file?path=${encodeURIComponent(f.path)}&apikey=${KEY}">Download</a> `:''}<button class="dg" data-df="${n}">${f.exists?'Delete':'Clear'}</button>
+ <h3>Files</h3>${fs.length?`<div class="tw"><table class="cards"><tr><th>File<th>Format<th>Size<th>Details<th>Added<th></tr>${fs.map((f,n)=>`<tr><td class="fi">${esc(f.name)}<small class="fold">${esc(f.folder)}</small>${f.exists?'':'<small style="color:#f08aa0">Not found on disk</small>'}<td>${esc(f.ext)}${f.primary&&fs.length>1?' <small class="mu">original</small>':''}<td>${mb(f.size)}<td class="mu">${esc(f.info||'')}<td>${esc(f.modified||'-')}<td>${f.exists?`<a class="l" href="/api/v1/item/${i.id}/file?path=${encodeURIComponent(f.path)}&apikey=${KEY}">Download</a> `:''}<button class="dg" data-df="${n}">${f.exists?'Delete':'Clear'}</button>
   ${f.exists&&i.convert_to.length?`<div class="cv"><select data-cs="${n}"><option value="">Convert to…</option>${i.convert_to.filter(x=>x!=f.ext.toLowerCase()&&!fs.some(g=>g.exists&&g.ext.toLowerCase()==x&&i.type!='audiobook')).map(x=>`<option value="${x}">${x.toUpperCase()}</option>`).join('')}</select><button data-cv="${n}">Convert</button></div>`:''}</tr>`).join('')}</table></div>`:'<div class="mu">No file yet. It will appear here once a download finishes and is imported.</div>'}
  ${jobs.length?'<div>'+jobs.map(j=>`<p class="sb ${j.state=='done'?'have':j.state=='running'?'want':''}">${esc(j.path.split('/').pop())} → ${j.to.toUpperCase()}: ${esc(j.message)}</p>`).join('')+'</div>':''}
  ${i.convert_to.length&&ok?'<p class="help">Converting uses your Transmute server (Settings &gt; Converter). The new copy is saved next to the original and shows up in this list.</p>':''}
- <div class="bar2" style="margin:24px 0 8px"><h3 style="margin:0">History</h3><span class="sp"></span>${i.history.length?'<button class="dg" id="hclr">Clear history</button>':''}</div>${i.history.length?'<div class="tw"><table><tr><th>Release<th>From<th>Status<th>Date<th></tr>'+i.history.map(h=>`<tr><td class="fi">${esc(h.title)}<td>${esc(KN[h.client_kind]||'-')}${h.client_name&&h.client_name!=KN[h.client_kind]?'<small class="mu">'+esc(h.client_name)+'</small>':''}<td>${h.state=='sent'?(h.note?'Could not finish: '+esc(h.note):'Downloading'):h.state=='imported'?'Imported':h.state=='failed'?'Failed'+(h.note?' ('+esc(h.note)+')':''):esc(h.state)}<td>${esc(h.created)}<td><button class="x1" title="Remove from history" data-hd="${h.id}">✕</button></tr>`).join('')+'</table></div>':'<div class="mu">No download history for this title.</div>'}
+ <div class="bar2" style="margin:24px 0 8px"><h3 style="margin:0">History</h3><span class="sp"></span>${i.history.length?'<button class="dg" id="hclr">Clear history</button>':''}</div>${i.history.length?'<div class="tw"><table class="cards"><tr><th>Release<th>From<th>Status<th>Date<th></tr>'+i.history.map(h=>`<tr><td class="fi">${esc(h.title)}<td>${esc(KN[h.client_kind]||'-')}${h.client_name&&h.client_name!=KN[h.client_kind]?'<small class="mu">'+esc(h.client_name)+'</small>':''}<td>${h.state=='sent'?(h.note?'Could not finish: '+esc(h.note):'Downloading'):h.state=='imported'?'Imported':h.state=='failed'?'Failed'+(h.note?' ('+esc(h.note)+')':''):esc(h.state)}<td>${esc(h.created)}<td><button class="x1" title="Remove from history" data-hd="${h.id}">✕</button></tr>`).join('')+'</table></div>':'<div class="mu">No download history for this title.</div>'}
  <div id="out"></div><h3>Remove</h3><button class="dg" id="del">Remove from Bookarr</button>`;delete m.dataset.keep;
  const q=x=>m.querySelector(x),again=()=>{m.dataset.keep=1;itemPage(i.id)};
  if(running.length||dl.length)POLL=setTimeout(()=>{if(location.hash=='#/item/'+i.id)again()},4000);
@@ -325,19 +336,19 @@ async function itemPage(id){chrome();REG=[];clearTimeout(POLL);const m=$('#m');i
  m.querySelectorAll('[data-cv]').forEach(b=>b.onclick=async()=>{const n=b.dataset.cv,to=m.querySelector(`[data-cs="${n}"]`).value;if(!to)return toast('Pick a format first',1);
   try{await send('item/'+i.id+'/convert','POST',{path:fs[n].path,to});toast('Converting to '+to.toUpperCase()+'…');again()}catch(e){toast(e.message,1)}});
  q('#del').onclick=async()=>{const n=await dlg('Remove <b>'+esc(i.title)+'</b> from Bookarr?',ok?[['Remove and delete the file','dg'],['Remove, keep the file','']]:[['Remove','dg']]);if(n<0)return;
-  try{await send('item/'+i.id+'?deleteFile='+(ok&&n==0?1:0),'DELETE');toast('Removed '+i.title);history.back()}catch(e){toast(e.message,1)}}}
+  try{await send('item/'+i.id+'?deleteFile='+(ok&&n==0?1:0),'DELETE');toast('Removed '+i.title);nav('#/'+i.type)}catch(e){toast(e.message,1)}}}
 // ---------- a followed author or series ----------
 const SCOL=[['num','#'],['title','Title'],['release_date','Released'],['status','Status']];let SSORT={k:'',d:1};
-async function seriesPage(id){chrome();REG=[];const m=$('#m');m.innerHTML='<div class="empty">Loading…</div>';let d;
+async function seriesPage(id){clearTimeout(POLL);clearTimeout(LPOLL);toTop();chrome();REG=[];const m=$('#m');m.innerHTML='<div class="empty">Loading…</div>';let d;
  try{d=await api('series/'+id)}catch(e){m.innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
- const sr=d.series,au=sr.provider=='author',hasNum=d.items.some(x=>x.num);$('#hd h1').textContent=au?'Author':'Series';
+ const sr=d.series,au=sr.provider=='author',hasNum=d.items.some(x=>x.num);if(view!=sr.type+'-follow'){view=sr.type+'-follow';term='';chrome()}$('#hd h1').textContent=au?'Author':'Series';
  const draw=()=>{let its=[...d.items];if(SSORT.k){const k=SSORT.k;its.sort((a,b)=>(k=='num'?(parseFloat(a.num)||0)-(parseFloat(b.num)||0):k=='status'?(STO[a.status]??3)-(STO[b.status]??3):cmpS(a[k],b[k]))*SSORT.d)}
- m.innerHTML=`<p><a class="l" href="javascript:history.back()">&larr; Back</a></p><div class="ip"><div class="po">${sr.cover?`<img src="${esc(sr.cover)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc(sr.title.slice(0,2))}</span></div>
+ m.innerHTML=`<p><a class="l" href="#" data-back>&larr; Back</a></p><div class="ip"><div class="po">${sr.cover?`<img src="${esc(sr.cover)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc(sr.title.slice(0,2))}</span></div>
  <div><h2>${esc(sr.title)}</h2><p class="mu">${esc([au?'Author':'Series',TN[sr.type],sr.publisher,sr.year,(sr.have||0)+' of '+sr.total+' downloaded',sr.wanted?sr.wanted+' wanted':''].filter(Boolean).join(' · '))}</p>${sr.description?`<div class="syn">${esc(sr.description)}</div>`:''}
  ${au?`<h3>What should download automatically?</h3><div class="mode">${[['future','Only new books that come out from now on'],['all','Every book I do not have yet (the whole back catalogue)'],['none','Nothing. Just list them; I will tick the ones I want']].map(([k,l])=>`<label><input type="radio" name="mm" value="${k}" ${(sr.mon_mode||'future')==k?'checked':''}>${l}</label>`).join('')}</div>`:`<label class="ck"><input type="checkbox" id="sm" ${sr.monitored?'checked':''}>Monitored (download missing issues automatically)</label>`}
  <div class="acts"><button class="p" id="ss">Search wanted now</button><button id="sf">${au?'Check for new books':'Refresh issues'}</button><button class="dg" id="sd">${au?'Stop following':'Remove series'}</button></div></div></div>
  <p class="help">Tick <b>Want</b> on any title to have Bookarr download it, untick to skip it.</p>
- <div class="tw"><table><tr><th>Want</th>${SCOL.filter(c=>c[0]!='num'||hasNum).map(([k,l])=>`<th class="sort" data-sk="${k}">${l}${SSORT.k==k?(SSORT.d>0?' ▲':' ▼'):''}</th>`).join('')}<th>File<th></tr>${its.map(x=>{const f=x.path&&x.file_size!=null;return `<tr><td><input type="checkbox" data-w="${x.id}" ${x.monitored||f?'checked':''} ${f?'disabled':''} style="accent-color:var(--pu)">${hasNum?`<td>${esc(x.num||'')}`:''}<td><a class="l" href="#/item/${x.id}">${esc(x.title)}</a><td>${esc(x.release_date||'')}<td>${f?'Downloaded':x.status=='wanted'?'Downloading':x.monitored?'Wanted':'Skipped'}<td>${f?esc(x.path.split('.').pop().toUpperCase())+', '+mb(x.file_size):'-'}<td>${f?`<button class="dg" data-df="${x.id}">Delete file</button>`:''}</tr>`}).join('')}</table></div>`;
+ <div class="tw"><table class="cards"><tr><th>Want</th>${SCOL.filter(c=>c[0]!='num'||hasNum).map(([k,l])=>`<th class="sort" data-sk="${k}">${l}${SSORT.k==k?(SSORT.d>0?' ▲':' ▼'):''}</th>`).join('')}<th>File<th></tr>${its.map(x=>{const f=x.path&&x.file_size!=null;return `<tr><td><input type="checkbox" data-w="${x.id}" ${x.monitored||f?'checked':''} ${f?'disabled':''} style="accent-color:var(--pu)">${hasNum?`<td>${esc(x.num||'')}`:''}<td><a class="l" href="#/item/${x.id}">${esc(x.title)}</a><td>${esc(x.release_date||'')}<td>${f?'Downloaded':x.status=='wanted'?'Downloading':x.monitored?'Wanted':'Skipped'}<td>${f?esc(x.path.split('.').pop().toUpperCase())+', '+mb(x.file_size):'-'}<td>${f?`<button class="dg" data-df="${x.id}">Delete file</button>`:''}</tr>`}).join('')}</table></div>`;
  const q=x=>m.querySelector(x);
  m.querySelectorAll('[data-sk]').forEach(h=>h.onclick=()=>{SSORT=SSORT.k==h.dataset.sk?{k:SSORT.k,d:-SSORT.d}:{k:h.dataset.sk,d:h.dataset.sk=='release_date'?-1:1};draw()});
  m.querySelectorAll('[data-w]').forEach(c=>c.onchange=async()=>{await send('item/'+c.dataset.w,'PUT',{monitored:c.checked?1:0});const x=d.items.find(y=>y.id==c.dataset.w);x.monitored=c.checked?1:0;draw()});
@@ -346,8 +357,10 @@ async function seriesPage(id){chrome();REG=[];const m=$('#m');m.innerHTML='<div 
  q('#ss').onclick=async e=>{e.target.disabled=true;toast('Searching…');try{const r=await send('series/'+sr.id+'/search','POST');toast('Sent '+r.sent+' downloads')}catch(x){toast(x.message,1)}e.target.disabled=false};
  q('#sf').onclick=async()=>{toast('Checking…');try{const r=await send('series/'+sr.id+'/refresh','POST');toast(r.added+' new titles');seriesPage(sr.id)}catch(e){toast(e.message,1)}};
  m.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const x=d.items.find(y=>y.id==b.dataset.df);deleteFile(x,x.path,()=>seriesPage(sr.id))});
- q('#sd').onclick=async()=>{const n=await dlg(au?'Stop following <b>'+esc(sr.title)+'</b>? Books you downloaded or ticked stay in your library.':'Remove <b>'+esc(sr.title)+'</b>? Downloaded files stay on disk.',[[au?'Stop following':'Remove series','dg']]);if(n<0)return;await send('series/'+sr.id,'DELETE');toast(au?'No longer following '+sr.title:'Series removed');history.back()}};
+ q('#sd').onclick=async()=>{const n=await dlg(au?'Stop following <b>'+esc(sr.title)+'</b>? Books you downloaded or ticked stay in your library.':'Remove <b>'+esc(sr.title)+'</b>? Downloaded files stay on disk.',[[au?'Stop following':'Remove series','dg']]);if(n<0)return;await send('series/'+sr.id,'DELETE');toast(au?'No longer following '+sr.title:'Series removed');nav('#/'+sr.type+'-follow')}};
  draw()}
-function route(){const m=location.hash.match(/^#\/(item|series)\/(\d+)/);m?(m[1]=='item'?itemPage(+m[2]):seriesPage(+m[2])):go()}
+function route(){const h=location.hash,m=h.match(/^#\/(item|series)\/(\d+)/);if(m)return m[1]=='item'?itemPage(+m[2]):seriesPage(+m[2]);
+ const r=h.match(/^#\/([\w-]+)(?:\/([\w-]+))?(?:\?q=(.*))?$/);view=r&&TITLE[r[1]]?r[1]:'main';if(view=='settings'&&r[2]&&SUBS.some(x=>x[0]==r[2]))sub=r[2];
+ term=r&&r[3]?decodeURIComponent(r[3]):'';toTop();go()}
 addEventListener('hashchange',route);route();
 </script></body></html>
