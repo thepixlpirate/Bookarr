@@ -1,5 +1,6 @@
 """Bookarr: comics, ebooks, audiobooks. Indexers via Prowlarr, clients: SABnzbd + qBittorrent."""
-import os, shutil, re, json, secrets, sqlite3, asyncio, pathlib, logging, base64, collections
+import os, shutil, re, json, secrets, sqlite3, asyncio, pathlib, logging, base64, collections, functools, time, tempfile
+from mutagen import File as MutagenFile
 from contextlib import asynccontextmanager
 from urllib.parse import quote, urlsplit
 import httpx
@@ -21,9 +22,13 @@ db.executescript("""CREATE TABLE IF NOT EXISTS grab(id INTEGER PRIMARY KEY, item
 CREATE TABLE IF NOT EXISTS blocklist(title TEXT PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS series(id INTEGER PRIMARY KEY, type TEXT, title TEXT, author TEXT, provider TEXT, ext_id TEXT, cover TEXT, description TEXT, year INT, publisher TEXT, monitored INT DEFAULT 1, added TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS device(id INTEGER PRIMARY KEY, name TEXT, key TEXT, created TEXT DEFAULT CURRENT_TIMESTAMP, last_used TEXT);""")
-for col in ("series_id INT", "num TEXT", "last_search TEXT", "description TEXT", "cover TEXT", "provider TEXT", "ext_id TEXT", "publisher TEXT"):
+for col in ("series_id INT", "num TEXT", "last_search TEXT", "description TEXT", "cover TEXT", "provider TEXT", "ext_id TEXT", "publisher TEXT", "meta TEXT"):
     try: db.execute(f"ALTER TABLE item ADD COLUMN {col}")
     except sqlite3.OperationalError: pass
+# mon_mode for followed authors/series: 'future' = only books released after you follow, 'all' = every missing book, 'none' = just list them
+try: db.execute("ALTER TABLE series ADD COLUMN mon_mode TEXT")
+except sqlite3.OperationalError: pass
+db.execute("UPDATE series SET mon_mode=CASE WHEN provider='author' THEN 'future' ELSE 'all' END WHERE mon_mode IS NULL"); db.commit()
 
 LOGS = collections.deque(maxlen=500)
 class Mem(logging.Handler):
@@ -36,11 +41,13 @@ DEFAULTS = {
     "general": {"logLevel": "info", "apiKey": ""},
     "indexer": {"prowlarrUrl": "", "prowlarrKey": ""},
     "library": {"comic": "/books/Comics", "ebook": "/books/Ebooks", "audiobook": "/books/Audiobooks", "downloads": "/downloads"},
-    "media": {"autoSearchMinutes": 60, "minSeeders": 1, "importMode": "auto", "remotePath": "", "localPath": "", "catComic": "comics", "catEbook": "ebooks", "catAudiobook": "audiobooks"},
+    "media": {"autoSearchMinutes": 60, "minSeeders": 1, "importMode": "auto", "remotePath": "", "localPath": "", "catComic": "comics", "catEbook": "ebooks", "catAudiobook": "audiobooks",
+              "downloadSubfolder": "Books"},
     "metadata": {"comicvineKey": "", "googleBooksKey": "", "audibleRegion": "com", "writeTags": 1},
     "quality": {"comic": "cbz,cbr,pdf", "ebook": "epub,azw3,mobi,pdf", "audiobook": "m4b,mp3", "comicMaxMB": 500, "ebookMaxMB": 200, "audiobookMaxMB": 3000, "requirePreferred": 0},
     "notifications": {"onGrab": 1, "onImport": 1, "onFail": 1, "discordWebhook": "", "pushoverUser": "", "pushoverToken": "", "telegramToken": "", "telegramChat": "", "webhookUrl": ""},
-    "email": {"smtpHost": "", "smtpPort": 587, "user": "", "password": "", "from": "", "kindleAddress": ""},
+    "email": {"smtpHost": "", "smtpPort": 587, "user": "", "password": "", "from": "", "kindleAddress": "", "kindleFormat": "azw3"},
+    "converter": {"transmuteUrl": "", "transmuteKey": ""},
     "security": {"authMode": "none", "username": "", "password": ""},
 }
 def cfg(sec):
@@ -67,7 +74,7 @@ app = FastAPI(title="Bookarr", lifespan=life)
 @app.middleware("http")
 async def basic_auth(request: Request, call_next):
     s = cfg("security")
-    if s["authMode"] == "basic" and not request.url.path.startswith(("/api/", "/opds", "/ping")):
+    if s["authMode"] == "basic" and not request.url.path.startswith(("/api/", "/opds", "/ping", "/kindle")):
         want = "Basic " + base64.b64encode(f'{s["username"]}:{s["password"]}'.encode()).decode()
         if request.headers.get("authorization") != want:
             return Response("Auth required", 401, {"WWW-Authenticate": 'Basic realm="Bookarr"'})
@@ -79,7 +86,7 @@ def init(): return Response(f'window.BOOKARR={{apiKey:"{cfg("general")["apiKey"]
 # ---------- system / config ----------
 @app.get("/api/v1/system/status", dependencies=API)
 def status():
-    return {"appName": "Bookarr", "version": "0.1.0", "counts": {t: rows("SELECT COUNT(*) c FROM item WHERE type=?", (t,))[0]["c"] for t in TYPES}}
+    return {"appName": "Bookarr", "version": "0.3.0", "counts": {t: rows("SELECT COUNT(*) c FROM item WHERE type=?", (t,))[0]["c"] for t in TYPES}}
 @app.get("/api/v1/log", dependencies=API)
 def get_log(): return list(LOGS)[::-1]
 @app.get("/api/v1/config/{sec}", dependencies=API)
@@ -91,6 +98,7 @@ async def put_cfg(sec: str, request: Request):
     if sec not in DEFAULTS: raise HTTPException(404)
     b = await request.json()
     if sec == "indexer" and b.get("prowlarrUrl"): b["prowlarrUrl"] = norm_url(b["prowlarrUrl"])
+    if sec == "converter" and b.get("transmuteUrl"): b["transmuteUrl"] = norm_url(b["transmuteUrl"])
     setcfg(sec, b); return cfg(sec)
 @app.post("/api/v1/indexer/test", dependencies=API)
 async def test_indexer():
@@ -111,8 +119,10 @@ async def test_indexer():
 def clients(): return rows("SELECT * FROM client")
 async def qb_login(x, c):
     k = c.keys(); u = norm_url(c["url"])
-    return await x.post(u + "/api/v2/auth/login", data={"username": (c["username"] if "username" in k else "") or "", "password": (c["password"] if "password" in k else "") or ""},
-                        headers={"Referer": u, "Origin": u})
+    return await x.post(u + "/api/v2/auth/login", data={"username": ((c["username"] if "username" in k else "") or "").strip(), "password": ((c["password"] if "password" in k else "") or "").strip()},
+                        headers={"Referer": u, "Origin": u}, follow_redirects=False)
+# qBittorrent up to 5.1 answers a good login with 200 "Ok."; 5.2 and newer answer 204 with an empty body. Both are success.
+qb_login_ok = lambda r: r.status_code == 204 or (r.status_code == 200 and r.text.strip() == "Ok.")
 def norm_url(u):
     u = (u or "").strip()
     if not u: return ""
@@ -132,10 +142,22 @@ async def test_client(c):
                 if "error" in q: return {"ok": False, "message": f"Reached SABnzbd {v}, but it said: {q['error']}"}
                 return {"ok": True, "message": f"Connected to SABnzbd {v}"}
             r = await qb_login(x, c)
+            if r.status_code in (301, 302, 303, 307, 308):
+                to = r.headers.get("location", "")
+                if to.startswith(("http://", "https://")) and "/api/v2" in to: to = to.split("/api/v2")[0]
+                return {"ok": False, "message": f"{url} sends visitors on to {to or 'another address'}. Enter that address instead" + (" (with https://)." if to.startswith("https://") else ".") +
+                        " For a server on your own network, the local address (http://192.168.x.x:8080) is the most reliable."}
             if r.status_code == 403: return {"ok": False, "message": "qBittorrent refused the login (too many failed attempts, or its Web UI blocks this address). Wait a few minutes and check its Web UI settings."}
-            if r.text.strip() == "Fails.": return {"ok": False, "message": f"Reached qBittorrent, but it rejected the login. Bookarr sent username \"{(c.get('username') or '').strip()}\" and a password of {len((c.get('password') or '').strip())} characters. If that is not what you expect, tap Edit and re-enter them."}
-            if r.text.strip() != "Ok.": return {"ok": False, "message": "That address did not answer like qBittorrent's API. Use just http://ip:port, with nothing after the port."}
-            return {"ok": True, "message": "Connected to qBittorrent " + (await x.get(url + "/api/v2/app/version")).text}
+            if r.text.strip() == "Fails." or r.status_code == 401: return {"ok": False, "message": f"Reached qBittorrent, but it rejected the login. Bookarr sent username \"{(c.get('username') or '').strip()}\" and a password of {len((c.get('password') or '').strip())} characters. If that is not what you expect, tap Edit and re-enter them."}
+            # Whatever the login said, the real test is whether the API now answers with a version number.
+            v = await x.get(url + "/api/v2/app/version", headers={"Referer": url})
+            if v.status_code == 200 and re.match(r"v?\d+\.\d+", v.text.strip()):
+                return {"ok": True, "message": "Connected to qBittorrent " + v.text.strip()}
+            if qb_login_ok(r) and v.status_code == 403:
+                return {"ok": False, "message": "qBittorrent accepted the login but then refused requests. In qBittorrent's Web UI settings, turn off \"Host header validation\" or add this address to its allowed list."}
+            body = re.sub(r"\s+", " ", r.text)[:80]
+            hint = " It answered with a web page, which usually means a login screen (Cloudflare Access, Authelia) or a different app is in front of it. Use the local address instead, like http://192.168.0.185:8080." if "<html" in r.text.lower() else ""
+            return {"ok": False, "message": f"That address did not answer like qBittorrent's API (HTTP {r.status_code}{', said: ' + body if body and not hint else ''}).{hint} Use just http://ip:port, with nothing after the port."}
     except ValueError: return {"ok": False, "message": "That address answered, but not like " + ("SABnzbd" if c["kind"] == "sabnzbd" else "qBittorrent") + ". Check the port."}
     except httpx.ConnectError: return {"ok": False, "message": f"Cannot connect to {url}. Check the address and port."}
     except httpx.TimeoutException: return {"ok": False, "message": f"{url} did not answer in time."}
@@ -163,6 +185,38 @@ async def edit_client(cid: int, request: Request):
 @app.delete("/api/v1/downloadclient/{cid}", dependencies=API)
 def del_client(cid: int): db.execute("DELETE FROM client WHERE id=?", (cid,)); db.commit(); return {}
 
+FOLDER = {"comic": "Comics", "ebook": "Ebooks", "audiobook": "Audiobooks"}
+CATKEY = {"comic": "catComic", "ebook": "catEbook", "audiobook": "catAudiobook"}
+def cat_plan():
+    m = cfg("media"); sub = (m.get("downloadSubfolder") or "").strip("/ ")
+    return [(m[CATKEY[t]], f"{sub}/{FOLDER[t]}" if sub else FOLDER[t]) for t in FOLDER]
+@app.post("/api/v1/downloadclient/{cid}/setup", dependencies=API)
+async def setup_client_folders(cid: int):
+    """Create the comics/ebooks/audiobooks categories in the client so each downloads into downloads/Books/<Type>."""
+    r = rows("SELECT * FROM client WHERE id=?", (cid,))
+    if not r: raise HTTPException(404)
+    c = r[0]; url = norm_url(c["url"]); done = []
+    async with httpx.AsyncClient(timeout=20, follow_redirects=True) as x:
+        if c["kind"] == "sabnzbd":
+            for cat, rel in cat_plan():  # SABnzbd: a relative folder is placed inside its "Completed Download Folder"
+                j = (await x.get(url + "/api", params={"mode": "set_config", "section": "categories", "name": cat, "dir": rel, "apikey": c["apikey"], "output": "json"})).json()
+                if isinstance(j, dict) and j.get("error"): raise HTTPException(502, f"SABnzbd said: {j['error']}")
+                done.append(f"{cat} → (completed folder)/{rel}")
+        else:
+            lr = await qb_login(x, c)
+            if lr.status_code == 403 or lr.text.strip() == "Fails.": raise HTTPException(502, "qBittorrent rejected the login. Fix the client first (tap Test).")
+            base = ((await x.get(url + "/api/v2/app/preferences", headers={"Referer": url})).json().get("save_path") or "/downloads").rstrip("/")
+            for cat, rel in cat_plan():
+                path = f"{base}/{rel}"
+                a = await x.post(url + "/api/v2/torrents/createCategory", data={"category": cat, "savePath": path}, headers={"Referer": url})
+                if a.status_code == 409:  # already exists: point it at the right folder
+                    a = await x.post(url + "/api/v2/torrents/editCategory", data={"category": cat, "savePath": path}, headers={"Referer": url})
+                if a.status_code not in (200, 204): raise HTTPException(502, f"qBittorrent would not save the {cat} category (HTTP {a.status_code}).")
+                done.append(f"{cat} → {path}")
+    if c["category"]: db.execute("UPDATE client SET category='' WHERE id=?", (cid,)); db.commit()
+    log.info("Set up download folders in %s: %s", c["name"] or c["kind"], "; ".join(done))
+    return {"ok": True, "folders": done}
+
 async def send_to_client(rel: dict, mtype: str, item_id: int = None):
     kind = "sabnzbd" if rel["protocol"] == "usenet" else "qbittorrent"
     c = db.execute("SELECT * FROM client WHERE kind=? AND enabled=1 LIMIT 1", (kind,)).fetchone()
@@ -177,8 +231,10 @@ async def send_to_client(rel: dict, mtype: str, item_id: int = None):
             else:
                 await qb_login(x, c)
                 dl = f"bookarr-{gid}"
-                r = await x.post(c["url"] + "/api/v2/torrents/add", data={"urls": rel["downloadUrl"], "category": cat, "tags": dl})
-            if r.status_code != 200 or not dl: raise HTTPException(502, f"{kind} did not accept the release")
+                # autoTMM makes qBittorrent save into the category's own folder (Books/Comics etc.)
+                r = await x.post(c["url"] + "/api/v2/torrents/add", data={"urls": rel["downloadUrl"], "category": cat, "tags": dl, "autoTMM": "true"}, headers={"Referer": c["url"]})
+                if r.status_code in (200, 202, 204) and r.text.strip() == "Fails.": r.status_code = 400
+            if r.status_code not in (200, 202, 204) or not dl: raise HTTPException(502, f"{kind} did not accept the release")
     except Exception:
         db.execute("DELETE FROM grab WHERE id=?", (gid,)); db.commit(); raise
     db.execute("UPDATE grab SET dl_id=? WHERE id=?", (dl, gid))
@@ -204,7 +260,15 @@ async def queue():
         except Exception as e: log.warning("Torrent queue fetch failed: %s", e)
     return out
 @app.get("/api/v1/history", dependencies=API)
-def history(): return rows("SELECT * FROM grab ORDER BY id DESC LIMIT 100")
+def history(): return rows("SELECT * FROM grab ORDER BY id DESC LIMIT 200")
+@app.delete("/api/v1/history", dependencies=API)
+def history_clear(scope: str = "finished", blocklist: int = 0):
+    """finished = imported + failed (default). all = also forget downloads still running (Bookarr will not import those)."""
+    n = db.execute("DELETE FROM grab" + ("" if scope == "all" else " WHERE state!='sent'")).rowcount
+    if blocklist: db.execute("DELETE FROM blocklist")
+    db.commit(); log.info("Cleared %d history entries", n); return {"cleared": n}
+@app.delete("/api/v1/history/{gid}", dependencies=API)
+def history_del(gid: int): db.execute("DELETE FROM grab WHERE id=?", (gid,)); db.commit(); return {}
 @app.post("/api/v1/command/checkdownloads", dependencies=API)
 async def cmd_check(): await check_downloads(); return {"ok": True}
 
@@ -245,12 +309,25 @@ def items(type: str = None):
     out = rows("SELECT * FROM item WHERE (?1 IS NULL OR type=?1) ORDER BY added DESC", (type,))
     for i in out: i["file_size"] = os.path.getsize(i["path"]) if i["path"] and os.path.exists(i["path"]) else None
     return out
-FIELDS = ("series_id", "num", "type", "title", "author", "series", "year", "release_date", "description", "cover", "provider", "ext_id", "publisher")
+FIELDS = ("series_id", "num", "type", "title", "author", "series", "year", "release_date", "description", "cover", "provider", "ext_id", "publisher", "meta", "monitored", "status")
+def find_existing(b):
+    if b.get("provider") and b.get("ext_id"):
+        r = rows("SELECT id FROM item WHERE provider=? AND ext_id=? AND type=?", (b["provider"], str(b["ext_id"]), b["type"]))
+        if r: return r[0]["id"]
+    nt = norm(b.get("title"))
+    for r in rows("SELECT id, title, author FROM item WHERE type=?", (b["type"],)):
+        if norm(r["title"]) == nt and (not b.get("author") or not r["author"] or norm(r["author"].split(",")[0]) == norm(b["author"].split(",")[0])): return r["id"]
+    return None
+def insert_item(b):
+    b = dict(b)
+    if isinstance(b.get("meta"), dict): b["meta"] = json.dumps(b["meta"])
+    ks = [k for k in FIELDS if k in b]
+    c = db.execute(f"INSERT INTO item({','.join(ks)}) VALUES({','.join('?' * len(ks))})", [b[k] for k in ks]); db.commit()
+    return c.lastrowid
 @app.post("/api/v1/item", dependencies=API)
 async def add_item(request: Request):
-    b = await request.json(); ks = [k for k in FIELDS if k in b]
-    c = db.execute(f"INSERT INTO item({','.join(ks)}) VALUES({','.join('?' * len(ks))})", [b[k] for k in ks]); db.commit()
-    return {"id": c.lastrowid}
+    b = await request.json(); e = find_existing(b)
+    return {"id": e or insert_item(b), "existing": bool(e)}
 @app.put("/api/v1/item/{iid}", dependencies=API)
 async def upd_item(iid: int, request: Request):
     for k, v in (await request.json()).items():
@@ -270,12 +347,38 @@ def file_list(it):
     if not p: return []
     ps, d = [p], os.path.dirname(p)
     if it["type"] == "audiobook" and os.path.isdir(d): ps = [os.path.join(d, f) for f in sorted(os.listdir(d)) if pathlib.Path(f).suffix.lower() in EXT["audiobook"]] or [p]
+    elif os.path.isdir(d):  # converted copies sit next to the original with the same name: Book.epub, Book.azw3, Book.pdf
+        stem = pathlib.Path(p).stem
+        ps += [os.path.join(d, f) for f in sorted(os.listdir(d)) if pathlib.Path(f).stem == stem and os.path.join(d, f) != p
+               and pathlib.Path(f).suffix.lower() in ALLFMT[it["type"]]]
     out = []
     for q in ps:
         ex = os.path.exists(q); st = os.stat(q) if ex else None
         out.append({"name": os.path.basename(q), "folder": os.path.dirname(q), "path": q, "ext": pathlib.Path(q).suffix.lstrip(".").upper(), "size": st.st_size if st else None,
-                    "modified": datetime.fromtimestamp(st.st_mtime, timezone.utc).strftime("%Y-%m-%d") if st else None, "exists": ex, "primary": q == p})
+                    "modified": datetime.fromtimestamp(st.st_mtime, timezone.utc).strftime("%Y-%m-%d") if st else None, "exists": ex, "primary": q == p,
+                    "info": file_info(q) if ex else ""})
     return out
+@functools.lru_cache(maxsize=512)
+def _finfo(q, mtime):
+    ext = pathlib.Path(q).suffix.lower()
+    try:
+        if ext == ".cbz": return f"{len(cbz_pages(q))} pages"
+        if ext in (".m4b", ".m4a", ".mp3"):
+            a = MutagenFile(q)
+            if a and a.info:
+                s = int(a.info.length); br = getattr(a.info, "bitrate", 0)
+                return f"{s // 3600}h {s % 3600 // 60}m" + (f", {br // 1000} kbps" if br else "")
+        if ext == ".epub":
+            with zipfile.ZipFile(q) as z: n = sum(1 for x in z.namelist() if x.lower().endswith((".xhtml", ".html", ".htm")))
+            return f"{n} sections" if n else ""
+        if ext == ".pdf":
+            with open(q, "rb") as f: n = len(re.findall(rb"/Type\s*/Page[^s]", f.read(30_000_000)))
+            return f"{n} pages" if n else ""
+    except Exception: pass
+    return ""
+def file_info(q):
+    try: return _finfo(q, os.path.getmtime(q))
+    except OSError: return ""
 def prune_empty(d):  # remove now-empty series/author folders, never the library roots themselves
     roots = [str(pathlib.Path(cfg("library")[k]).resolve()) for k in ("comic", "ebook", "audiobook")]; p = pathlib.Path(d).resolve()
     while str(p) not in roots and any(str(p).startswith(r + os.sep) for r in roots):
@@ -286,7 +389,12 @@ def prune_empty(d):  # remove now-empty series/author folders, never the library
 def item_get(iid: int):
     r = rows("SELECT * FROM item WHERE id=?", (iid,))
     if not r: raise HTTPException(404, "That title is no longer in Bookarr.")
-    it = add_size(r)[0]; it["files"] = file_list(it); it["history"] = rows("SELECT * FROM grab WHERE item_id=? ORDER BY id DESC LIMIT 20", (iid,)); return it
+    it = add_size(r)[0]; it["files"] = file_list(it); it["history"] = rows("SELECT * FROM grab WHERE item_id=? ORDER BY id DESC LIMIT 20", (iid,))
+    it["meta"] = item_meta(it); it["convert_to"] = CONVERT_TO.get(it["type"], [])
+    it["follow"] = rows("SELECT id, title, provider FROM series WHERE id=?", (it["series_id"],)) if it.get("series_id") else []
+    if not it["follow"] and it.get("author"):
+        it["follow"] = rows("SELECT id, title, provider FROM series WHERE provider='author' AND type=? AND lower(title)=lower(?)", (it["type"], it["author"].split(",")[0].strip()))
+    return it
 @app.get("/api/v1/item/{iid}/file", dependencies=API)
 def item_file(iid: int, path: str = None):
     r = rows("SELECT * FROM item WHERE id=?", (iid,))
@@ -309,56 +417,124 @@ def newest(limit: int = 50): return rows("SELECT * FROM item ORDER BY added DESC
 def calendar(start: str = "0000", end: str = "9999"):
     return rows("SELECT * FROM item WHERE release_date BETWEEN ? AND ? ORDER BY release_date", (start, end))
 
-EXT = {"comic": {".cbz", ".cbr", ".pdf"}, "ebook": {".epub", ".mobi", ".azw3", ".pdf"}, "audiobook": {".m4b", ".mp3"}}
+EXT = {"comic": {".cbz", ".cbr", ".pdf"}, "ebook": {".epub", ".mobi", ".azw3", ".pdf"}, "audiobook": {".m4b", ".mp3", ".m4a"}}
+# every format a title's files may come in, including converted copies
+ALLFMT = {"comic": {".cbz", ".cbr", ".cb7", ".pdf", ".epub"}, "ebook": {".epub", ".kepub", ".mobi", ".azw3", ".pdf", ".fb2", ".txt", ".docx"}, "audiobook": {".m4b", ".mp3", ".m4a"}}
+# what Transmute can turn each type into (Calibre for ebooks, its comic converter for comics, ffmpeg for audio)
+CONVERT_TO = {"ebook": ["epub", "azw3", "mobi", "pdf", "kepub", "fb2"], "comic": ["cbz", "pdf"], "audiobook": ["m4b", "mp3", "m4a"]}
 @app.post("/api/v1/library/scan", dependencies=API)
 def scan():
     n = 0
     for t, ext in EXT.items():
         root = pathlib.Path(cfg("library")[t])
         if not root.exists(): continue
-        for f in root.rglob("*"):
+        known = {str(pathlib.Path(r["path"]).with_suffix("")) for r in rows("SELECT path FROM item WHERE path IS NOT NULL AND type=?", (t,))}
+        for f in sorted(root.rglob("*")):
+            if t != "audiobook" and str(f.with_suffix("")) in known: continue  # converted copy of a title already in Bookarr
             if f.suffix.lower() in ext and not rows("SELECT 1 FROM item WHERE path=?", (str(f),)):
+                known.add(str(f.with_suffix("")))
                 db.execute("INSERT INTO item(type,title,series,path,status) VALUES(?,?,?,?, 'downloaded')", (t, f.stem, f.parent.name if f.parent != root else None, str(f))); n += 1
     db.commit(); log.info("Library scan added %d items", n); return {"added": n}
 
 # ---------- metadata providers ----------
 import re, zipfile
-UA = {"User-Agent": "Bookarr/0.1"}
-clean = lambda h: re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", h or "")).strip()
+UA = {"User-Agent": "Bookarr/0.3"}
+def clean(h):  # HTML -> plain text, keeping paragraph breaks so long synopses stay readable
+    h = re.sub(r"(?i)<\s*(br|/p|/div|/li|/h\d)\s*/?>", "\n", h or "")
+    h = re.sub(r"<[^>]+>", " ", h)
+    h = h.replace("&nbsp;", " ").replace("&amp;", "&").replace("&quot;", '"').replace("&#39;", "'").replace("&lt;", "<").replace("&gt;", ">")
+    return "\n".join(l for l in (re.sub(r"[ \t]+", " ", x).strip() for x in h.split("\n")) if l).strip()
 yr = lambda v: int(str(v)[:4]) if str(v or "")[:4].isdigit() else None
+def uniq(xs, n=12):
+    out = []
+    for x in xs:
+        x = (x or "").strip()
+        if x and x.lower() not in [o.lower() for o in out]: out.append(x)
+    return out[:n]
+LANG = {"en": "English", "eng": "English", "es": "Spanish", "spa": "Spanish", "fr": "French", "fre": "French", "de": "German", "ger": "German", "it": "Italian", "ita": "Italian",
+        "ja": "Japanese", "jpn": "Japanese", "pt": "Portuguese", "por": "Portuguese", "nl": "Dutch", "ru": "Russian", "zh": "Chinese"}
 async def jget(url, **kw):
     async with httpx.AsyncClient(timeout=20, headers=UA, follow_redirects=True) as x:
         r = await x.get(url, **kw); r.raise_for_status(); return r.json()
 async def look_openlibrary(term, t):
-    j = await jget("https://openlibrary.org/search.json", params={"q": term, "limit": 12, "fields": "key,title,author_name,first_publish_year,cover_i"})
+    j = await jget("https://openlibrary.org/search.json", params={"q": term, "limit": 12,
+        "fields": "key,title,subtitle,author_name,first_publish_year,cover_i,subject,number_of_pages_median,language,isbn,ratings_average,ratings_count,publisher"})
     return [{"type": t, "title": d["title"], "author": ", ".join(d.get("author_name", [])[:2]), "year": d.get("first_publish_year"), "description": "", "provider": "openlibrary", "ext_id": d["key"],
-             "cover": f"https://covers.openlibrary.org/b/id/{d['cover_i']}-L.jpg" if d.get("cover_i") else None} for d in j.get("docs", [])]
+             "publisher": (d.get("publisher") or [None])[0],
+             "cover": f"https://covers.openlibrary.org/b/id/{d['cover_i']}-L.jpg" if d.get("cover_i") else None,
+             "meta": {"subtitle": d.get("subtitle"), "subjects": uniq(d.get("subject", []), 10), "pages": d.get("number_of_pages_median"),
+                      "language": ", ".join(uniq([LANG.get(l, l) for l in d.get("language", [])], 3)), "isbn": (d.get("isbn") or [None])[0],
+                      "rating": round(d["ratings_average"], 1) if d.get("ratings_average") else None, "ratings": d.get("ratings_count")}} for d in j.get("docs", [])]
 async def look_comic(term):  # ComicVine volumes (needs free API key), falls back to Open Library
     k = cfg("metadata")["comicvineKey"]
     if not k: return await look_openlibrary(term, "comic")
     j = await jget("https://comicvine.gamespot.com/api/search/", params={"api_key": k, "format": "json", "resources": "volume", "query": term, "limit": 12})
-    return [{"type": "comic", "title": v["name"], "series": v["name"], "year": yr(v.get("start_year")), "publisher": (v.get("publisher") or {}).get("name"),
-             "description": clean(v.get("description")), "cover": (v.get("image") or {}).get("medium_url"), "provider": "comicvine", "ext_id": str(v["id"])} for v in j.get("results", [])]
+    return [{"type": "comic", "title": v["name"], "series": v["name"], "year": yr(v.get("start_year")), "publisher": (v.get("publisher") or {}).get("name"), "issues": v.get("count_of_issues"),
+             "description": clean(v.get("description") or v.get("deck")), "cover": (v.get("image") or {}).get("medium_url"), "provider": "comicvine", "ext_id": str(v["id"]),
+             "meta": {"issues": v.get("count_of_issues")}} for v in j.get("results", [])]
+def gb_item(v, t="ebook"):
+    i = v.get("volumeInfo", {}); ids = {x.get("type"): x.get("identifier") for x in i.get("industryIdentifiers", [])}
+    cats = [p.strip() for c in i.get("categories", []) for p in c.split("/")]
+    return {"type": t, "title": i.get("title"), "author": ", ".join(i.get("authors", [])), "year": yr(i.get("publishedDate")), "release_date": i.get("publishedDate"),
+            "publisher": i.get("publisher"), "description": clean(i.get("description")), "provider": "googlebooks", "ext_id": v["id"],
+            "cover": ((i.get("imageLinks") or {}).get("thumbnail", "").replace("http://", "https://").replace("&edge=curl", "") or None),
+            "meta": {"subtitle": i.get("subtitle"), "genres": uniq([c for c in cats if c.lower() not in ("general",)], 8), "pages": i.get("pageCount"),
+                     "language": LANG.get(i.get("language"), i.get("language")), "isbn": ids.get("ISBN_13") or ids.get("ISBN_10"),
+                     "rating": i.get("averageRating"), "ratings": i.get("ratingsCount"), "maturity": "Mature" if i.get("maturityRating") == "MATURE" else None}}
 async def look_ebook(term):  # Google Books, falls back to Open Library
     p = {"q": term, "maxResults": 12, "printType": "books"}
     if cfg("metadata")["googleBooksKey"]: p["key"] = cfg("metadata")["googleBooksKey"]
     try:
-        j = await jget("https://www.googleapis.com/books/v1/volumes", params=p); out = []
-        for v in j.get("items", []):
-            i = v["volumeInfo"]
-            out.append({"type": "ebook", "title": i.get("title"), "author": ", ".join(i.get("authors", [])), "year": yr(i.get("publishedDate")), "release_date": i.get("publishedDate"),
-                        "publisher": i.get("publisher"), "description": clean(i.get("description")), "provider": "googlebooks", "ext_id": v["id"],
-                        "cover": (i.get("imageLinks") or {}).get("thumbnail", "").replace("http://", "https://") or None})
-        return out
+        j = await jget("https://www.googleapis.com/books/v1/volumes", params=p)
+        return [gb_item(v) for v in j.get("items", [])]
     except Exception as e:
         log.warning("Google Books failed (%s); using Open Library", e); return await look_openlibrary(term, "ebook")
+AUDIBLE_GROUPS = "media,product_desc,contributors,series,product_attrs,product_extended_attrs,category_ladders,rating"
+def audible_item(p):
+    rt = p.get("runtime_length_min"); cats = [c["name"] for l in p.get("category_ladders", []) for c in l.get("ladder", [])]
+    rat = ((p.get("rating") or {}).get("overall_distribution") or {})
+    return {"type": "audiobook", "title": p["title"], "author": ", ".join(a["name"] for a in p.get("authors", [])), "series": ((p.get("series") or [{}])[0]).get("title"),
+            "num": ((p.get("series") or [{}])[0]).get("sequence"), "year": yr(p.get("release_date")), "release_date": p.get("release_date"), "publisher": p.get("publisher_name"),
+            "description": clean(p.get("publisher_summary") or p.get("merchandising_summary")), "provider": "audible", "ext_id": p["asin"],
+            "cover": (p.get("product_images") or {}).get("500"),
+            "meta": {"subtitle": p.get("subtitle"), "narrator": ", ".join(n["name"] for n in p.get("narrators", [])), "runtime": rt, "genres": uniq(cats, 8),
+                     "language": (p.get("language") or "").capitalize() or None, "abridged": p.get("format_type"),
+                     "rating": rat.get("display_average_rating"), "ratings": rat.get("num_ratings")}}
 async def look_audio(term):  # Audible catalog
-    j = await jget(f"https://api.audible.{cfg('metadata')['audibleRegion']}/1.0/catalog/products", params={"title": term, "num_results": 12, "products_sort_by": "Relevance",
-        "response_groups": "media,product_desc,contributors,series,product_attrs"})
-    return [{"type": "audiobook", "title": p["title"], "author": ", ".join(a["name"] for a in p.get("authors", [])), "series": ((p.get("series") or [{}])[0]).get("title"), "year": yr(p.get("release_date")),
-             "release_date": p.get("release_date"), "publisher": p.get("publisher_name"), "description": clean(p.get("publisher_summary")), "provider": "audible", "ext_id": p["asin"],
-             "cover": (p.get("product_images") or {}).get("500")} for p in j.get("products", [])]
+    j = await jget(f"https://api.audible.{cfg('metadata')['audibleRegion']}/1.0/catalog/products", params={"title": term, "num_results": 12, "products_sort_by": "Relevance", "response_groups": AUDIBLE_GROUPS})
+    return [audible_item(p) for p in j.get("products", [])]
 LOOK = {"comic": look_comic, "ebook": look_ebook, "audiobook": look_audio}
+
+async def enrich(d):
+    """Fill in the full synopsis, genres, page count etc. from the provider's detail page (search results are often thin)."""
+    p, eid, m = d.get("provider"), d.get("ext_id"), dict(d.get("meta") or {})
+    try:
+        if p == "openlibrary" and eid:
+            w = await jget(f"https://openlibrary.org{eid}.json")
+            desc = w.get("description"); desc = desc.get("value") if isinstance(desc, dict) else desc
+            if desc and not d.get("description"): d["description"] = clean(desc).split("\n----------")[0]
+            m["subjects"] = uniq((m.get("subjects") or []) + w.get("subjects", []), 10)
+        elif p == "googlebooks" and eid:
+            g = gb_item(await jget(f"https://www.googleapis.com/books/v1/volumes/{eid}"), d.get("type", "ebook"))
+            if g["description"] and len(g["description"]) > len(d.get("description") or ""): d["description"] = g["description"]
+            for k, v in g["meta"].items():
+                if v and not m.get(k): m[k] = v
+            if g["meta"].get("genres"): m["genres"] = g["meta"]["genres"]
+        elif p == "audible" and eid and not m.get("runtime"):
+            a = audible_item((await jget(f"https://api.audible.{cfg('metadata')['audibleRegion']}/1.0/catalog/products/{eid}", params={"response_groups": AUDIBLE_GROUPS}))["product"])
+            if a["description"] and not d.get("description"): d["description"] = a["description"]
+            for k in ("cover", "series", "num", "publisher", "release_date", "author"):
+                if a.get(k) and not d.get(k): d[k] = a[k]
+            m = {**a["meta"], **{k: v for k, v in m.items() if v}}
+        elif p == "comicvine" and eid and cfg("metadata")["comicvineKey"]:
+            v = (await jget(f"https://comicvine.gamespot.com/api/volume/4050-{eid}/", params={"api_key": cfg("metadata")["comicvineKey"], "format": "json",
+                 "field_list": "description,deck,count_of_issues,characters,concepts,people"})).get("results") or {}
+            if not d.get("description"): d["description"] = clean(v.get("description") or v.get("deck"))
+            m.update({"issues": v.get("count_of_issues"), "characters": uniq([c["name"] for c in v.get("characters", [])], 10),
+                      "subjects": uniq([c["name"] for c in v.get("concepts", [])], 8), "creators": uniq([c["name"] for c in v.get("people", [])], 6)})
+    except Exception as e: log.info("Detail lookup for %s skipped: %s", d.get("title"), e)
+    d["meta"] = {k: v for k, v in m.items() if v not in (None, "", [], 0)}
+    return d
 
 @app.get("/api/v1/lookup", dependencies=API)
 async def lookup(term: str, types: str = "comic,ebook,audiobook"):
@@ -367,11 +543,23 @@ async def lookup(term: str, types: str = "comic,ebook,audiobook"):
         if isinstance(r, Exception): log.warning("Lookup %s failed: %s", t, r)
         else: out += r
     return out
+@app.post("/api/v1/lookup/details", dependencies=API)
+async def lookup_details(request: Request): return await enrich(await request.json())
+def item_meta(it):
+    try: return json.loads(it.get("meta") or "{}")
+    except ValueError: return {}
 async def refresh_item(iid):
-    it = rows("SELECT * FROM item WHERE id=?", (iid,))[0]; r = await LOOK[it["type"]](it["title"])
+    it = rows("SELECT * FROM item WHERE id=?", (iid,))[0]
+    if it.get("provider") and it.get("ext_id") and it["provider"] != "author":
+        r = [{k: it[k] for k in ("type", "title", "provider", "ext_id", "description")} | {"meta": item_meta(it)}]
+    else:
+        r = await LOOK[it["type"]](" ".join(x for x in (it["title"], (it.get("author") or "").split(",")[0]) if x))
+        if not r: r = await LOOK[it["type"]](it["title"])
     if not r: return False
+    best = await enrich(r[0])
     for k in ("description", "cover", "author", "year", "publisher", "provider", "ext_id", "series", "release_date"):
-        if r[0].get(k) and (k in ("description", "cover", "provider", "ext_id") or not it[k]): db.execute(f"UPDATE item SET {k}=? WHERE id=?", (r[0][k], iid))
+        if best.get(k) and (k in ("description", "cover", "provider", "ext_id") or not it[k]): db.execute(f"UPDATE item SET {k}=? WHERE id=?", (best[k], iid))
+    db.execute("UPDATE item SET meta=? WHERE id=?", (json.dumps({**item_meta(it), **best.get("meta", {})}), iid))
     db.commit(); (COVERS / f"{iid}.img").unlink(missing_ok=True); return True
 @app.post("/api/v1/item/{iid}/refresh", dependencies=API)
 async def refresh(iid: int):
@@ -379,7 +567,7 @@ async def refresh(iid: int):
     return rows("SELECT * FROM item WHERE id=?", (iid,))[0]
 @app.post("/api/v1/metadata/refresh", dependencies=API)
 async def refresh_missing():
-    todo = rows("SELECT id FROM item WHERE description IS NULL OR description=''"); n = 0
+    todo = rows("SELECT id FROM item WHERE description IS NULL OR description='' OR meta IS NULL"); n = 0
     for t in todo:
         try: n += await refresh_item(t["id"])
         except Exception as e: log.warning("Metadata refresh failed: %s", e)
@@ -416,7 +604,8 @@ async def cover_api(iid: int): return await cover_file(iid)
 from datetime import datetime, timezone
 from xml.sax.saxutils import escape as xe
 MIME = {".cbz": "application/vnd.comicbook+zip", ".cbr": "application/vnd.comicbook-rar", ".pdf": "application/pdf", ".epub": "application/epub+zip",
-        ".mobi": "application/x-mobipocket-ebook", ".azw3": "application/vnd.amazon.ebook", ".m4b": "audio/mp4", ".mp3": "audio/mpeg"}
+        ".mobi": "application/x-mobipocket-ebook", ".azw3": "application/vnd.amazon.ebook", ".m4b": "audio/mp4", ".mp3": "audio/mpeg", ".m4a": "audio/mp4",
+        ".kepub": "application/kepub+zip", ".fb2": "application/x-fictionbook+xml", ".cb7": "application/x-cb7", ".txt": "text/plain"}
 NAVCT = "application/atom+xml;profile=opds-catalog;kind=navigation"; ACQCT = "application/atom+xml;profile=opds-catalog;kind=acquisition"
 PAGE = 50
 from contextvars import ContextVar
@@ -692,52 +881,125 @@ async def fetch_series_items(sr):
                 out.append({"ext_id": v["asin"], "num": s.get("sequence"), "title": v["title"], "release_date": v.get("release_date"), "cover": (v.get("product_images") or {}).get("500"),
                             "author": ", ".join(a["name"] for a in v.get("authors", [])), "description": clean(v.get("publisher_summary"))})
     elif p == "author":
-        j = await jget("https://www.googleapis.com/books/v1/volumes", params={"q": f'inauthor:"{sr["title"]}"', "maxResults": 40, "orderBy": "newest", "printType": "books"})
-        for v in j.get("items", []):
-            i = v["volumeInfo"]
-            out.append({"ext_id": v["id"], "title": i.get("title"), "release_date": i.get("publishedDate"), "author": sr["title"], "description": clean(i.get("description")),
-                        "cover": (i.get("imageLinks") or {}).get("thumbnail", "").replace("http://", "https://") or None})
+        name = sr["title"]; nm = norm(name); seen = set()
+        same = lambda names: any(norm(a) == nm for a in names)
+        junk = re.compile(r"\b(summary|study guide|workbook|analysis of|sparknotes|cliffsnotes|boxed set|box set)\b", re.I)
+        if sr["type"] == "audiobook":
+            j = await jget(f"https://api.audible.{cfg('metadata')['audibleRegion']}/1.0/catalog/products", params={"author": name, "num_results": 50, "products_sort_by": "-ReleaseDate", "response_groups": AUDIBLE_GROUPS})
+            for v in j.get("products", []):
+                a = audible_item(v)
+                if not same(x["name"] for x in v.get("authors", [])) or norm(a["title"]) in seen or junk.search(a["title"]): continue
+                seen.add(norm(a["title"])); out.append(a)
+        else:
+            p2 = {"q": f'inauthor:"{name}"', "maxResults": 40, "orderBy": "newest", "printType": "books"}
+            if cfg("metadata")["googleBooksKey"]: p2["key"] = cfg("metadata")["googleBooksKey"]
+            j = await jget("https://www.googleapis.com/books/v1/volumes", params=p2)
+            for v in j.get("items", []):
+                a = gb_item(v, sr["type"])
+                if not a["title"] or not same(v["volumeInfo"].get("authors", [])) or norm(a["title"]) in seen or junk.search(a["title"]): continue
+                seen.add(norm(a["title"])); a["author"] = name; out.append(a)
     return out
+def want_monitored(sr, release_date):
+    mode = sr.get("mon_mode") or "all"
+    if not sr["monitored"] or mode == "none": return 0
+    if mode == "all": return 1
+    return 1 if release_date and str(release_date)[:10] >= str(sr["added"])[:10] else 0  # 'future': only books that come out after you followed
 async def sync_series(sid):
     sr = rows("SELECT * FROM series WHERE id=?", (sid,))[0]; added = 0
     have = {}
     for e in rows("SELECT * FROM item WHERE series=? AND type=? AND series_id IS NULL AND status='downloaded'", (sr["title"], sr["type"])):
         m = re.findall(r"(?<!\d)0*(\d{1,4})(?!\d)", e["title"])
         if m: have[m[-1]] = e
+    linked = {norm(r["title"]) for r in rows("SELECT title FROM item WHERE series_id=?", (sid,))}
+    loose = {}  # books you already added by hand: link them to the author instead of adding them twice
+    if sr["provider"] == "author":
+        for e in rows("SELECT * FROM item WHERE type=? AND series_id IS NULL AND author IS NOT NULL", (sr["type"],)):
+            if norm(sr["title"]) in [norm(a) for a in e["author"].split(",")]: loose[norm(e["title"])] = e
     for i in await fetch_series_items(sr):
         if rows("SELECT 1 FROM item WHERE series_id=? AND ext_id=?", (sid, i["ext_id"])): continue
-        try: n = str(int(float(i.get("num") or ""))) 
+        if sr["provider"] == "author":
+            if norm(i["title"]) in linked: continue
+            if norm(i["title"]) in loose:
+                db.execute("UPDATE item SET series_id=? WHERE id=?", (sid, loose.pop(norm(i["title"]))["id"])); linked.add(norm(i["title"])); continue
+        try: n = str(int(float(i.get("num") or "")))
         except ValueError: n = None
-        if n and n in have:
+        if n and n in have and sr["provider"] != "author":
             db.execute("UPDATE item SET series_id=?, ext_id=?, num=?, release_date=?, cover=COALESCE(cover,?) WHERE id=?", (sid, i["ext_id"], i["num"], i.get("release_date"), i.get("cover"), have[n]["id"])); continue
-        db.execute("INSERT INTO item(type,title,series,series_id,num,ext_id,release_date,cover,author,description,provider,monitored,status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'missing')",
-                   (sr["type"], i["title"], sr["title"], sid, i.get("num"), i["ext_id"], i.get("release_date"), i.get("cover"), i.get("author") or sr["author"], i.get("description"), sr["provider"], sr["monitored"])); added += 1
-    db.commit(); log.info("Series %s synced, %d new items", sr["title"], added); return added
-SQ = "SELECT s.*, COUNT(i.id) total, COALESCE(SUM(i.status='downloaded'),0) have FROM series s LEFT JOIN item i ON i.series_id=s.id"
+        insert_item({"type": sr["type"], "title": i["title"], "series": i.get("series") if sr["provider"] == "author" else sr["title"], "series_id": sid, "num": i.get("num"),
+                     "ext_id": i["ext_id"], "release_date": i.get("release_date"), "year": yr(i.get("release_date")), "cover": i.get("cover"), "author": i.get("author") or sr["author"],
+                     "description": i.get("description"), "publisher": i.get("publisher"), "meta": i.get("meta") or {},
+                     "provider": i.get("provider") or sr["provider"], "monitored": want_monitored(sr, i.get("release_date")), "status": "missing"})
+        linked.add(norm(i["title"])); added += 1
+    db.commit(); log.info("%s %s synced, %d new items", "Author" if sr["provider"] == "author" else "Series", sr["title"], added); return added
+SQ = ("SELECT s.*, COUNT(i.id) total, COALESCE(SUM(i.status='downloaded'),0) have, COALESCE(SUM(i.monitored=1 AND i.status!='downloaded'),0) wanted, MAX(i.release_date) latest "
+      "FROM series s LEFT JOIN item i ON i.series_id=s.id")
 @app.get("/api/v1/series", dependencies=API)
-def series_list(): return rows(SQ + " GROUP BY s.id ORDER BY s.title")
-@app.post("/api/v1/series", dependencies=API)
-async def add_series(request: Request):
-    b = await request.json()
-    if rows("SELECT 1 FROM series WHERE provider=? AND ext_id=?", (b.get("provider"), str(b.get("ext_id")))): raise HTTPException(409, "Already monitored")
-    sid = db.execute("INSERT INTO series(type,title,author,provider,ext_id,cover,description,year,publisher) VALUES(?,?,?,?,?,?,?,?,?)",
-                     (b["type"], b["title"], b.get("author"), b.get("provider"), str(b.get("ext_id")), b.get("cover"), b.get("description"), b.get("year"), b.get("publisher"))).lastrowid; db.commit()
+def series_list(type: str = None, kind: str = None):
+    """kind=author for followed authors, kind=series for series (ComicVine runs, Audible series)."""
+    w = " WHERE (?1 IS NULL OR s.type=?1) AND (?2 IS NULL OR (?2='author' AND s.provider='author') OR (?2='series' AND s.provider!='author'))"
+    return rows(SQ + w + " GROUP BY s.id ORDER BY s.title", (type, kind))
+async def follow(b):
+    """Start following a series or author. Returns (id, number of books added)."""
+    e = rows("SELECT id FROM series WHERE provider=? AND (ext_id=? OR (provider='author' AND type=? AND lower(title)=lower(?)))",
+             (b.get("provider"), str(b.get("ext_id")), b["type"], b["title"]))
+    if e: return e[0]["id"], await sync_series(e[0]["id"]), True
+    mode = b.get("mon_mode") or ("future" if b.get("provider") == "author" else "all")
+    sid = db.execute("INSERT INTO series(type,title,author,provider,ext_id,cover,description,year,publisher,mon_mode) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                     (b["type"], b["title"], b.get("author"), b.get("provider"), str(b.get("ext_id")), b.get("cover"), b.get("description"), b.get("year"), b.get("publisher"), mode)).lastrowid; db.commit()
     try: added = await sync_series(sid)
     except Exception:
         db.execute("DELETE FROM series WHERE id=?", (sid,)); db.commit(); raise
+    return sid, added, False
+@app.post("/api/v1/series", dependencies=API)
+async def add_series(request: Request):
+    b = await request.json(); sid, added, existed = await follow(b)
+    if existed: raise HTTPException(409, "Already monitored")
     return {"id": sid, "added": added}
 @app.get("/api/v1/series/{sid}", dependencies=API)
 def series_get(sid: int):
-    return {"series": rows(SQ + " WHERE s.id=? GROUP BY s.id", (sid,))[0], "items": add_size(rows("SELECT * FROM item WHERE series_id=? ORDER BY CAST(num AS REAL), release_date", (sid,)))}
+    r = rows(SQ + " WHERE s.id=? GROUP BY s.id", (sid,))
+    if not r: raise HTTPException(404, "That series or author is no longer followed.")
+    return {"series": r[0], "items": add_size(rows("SELECT * FROM item WHERE series_id=? ORDER BY CAST(num AS REAL), release_date DESC", (sid,)))}
 @app.put("/api/v1/series/{sid}", dependencies=API)
 async def series_put(sid: int, request: Request):
     b = await request.json()
-    if "monitored" in b:
-        db.execute("UPDATE series SET monitored=? WHERE id=?", (b["monitored"], sid)); db.execute("UPDATE item SET monitored=? WHERE series_id=? AND status!='downloaded'", (b["monitored"], sid)); db.commit()
-    return {"ok": True}
+    if "monitored" in b: db.execute("UPDATE series SET monitored=? WHERE id=?", (b["monitored"], sid))
+    if b.get("mon_mode") in ("future", "all", "none"): db.execute("UPDATE series SET mon_mode=? WHERE id=?", (b["mon_mode"], sid))
+    sr = rows("SELECT * FROM series WHERE id=?", (sid,))[0]
+    for it in rows("SELECT id, release_date FROM item WHERE series_id=? AND status!='downloaded'", (sid,)):
+        db.execute("UPDATE item SET monitored=? WHERE id=?", (want_monitored(sr, it["release_date"]), it["id"]))
+    db.commit(); return {"ok": True}
+
+# ---------- one-step add: what the buttons on a search result do ----------
+@app.post("/api/v1/add", dependencies=API)
+async def add_flow(request: Request):
+    """mode = search (add, monitor, download the best release now)
+              author (same, plus follow the author for their other/new books)
+              series (follow the whole comic/audiobook series)
+              manual (add + monitor only; you then pick a release yourself)"""
+    b = await request.json(); mode = b.pop("mode", "search"); b.pop("issues", None); out = {}
+    if mode == "series":
+        sid, added, existed = await follow(b); return {"series_id": sid, "added": added, "existing": existed}
+    if not b.get("description") or not b.get("meta"): b = await enrich(b)
+    iid = find_existing(b); out["existing"] = bool(iid)
+    if not iid: iid = insert_item({**b, "monitored": 1, "status": "missing"})
+    else: db.execute("UPDATE item SET monitored=1 WHERE id=?", (iid,)); db.commit()
+    out["id"] = iid
+    if mode == "author" and b.get("author"):
+        name = b["author"].split(",")[0].strip()
+        sid, added, existed = await follow({"type": b["type"], "title": name, "author": name, "provider": "author", "ext_id": name})
+        db.execute("UPDATE item SET series_id=COALESCE(series_id, ?) WHERE id=?", (sid, iid)); db.commit()
+        out["author"] = {"id": sid, "name": name, "added": added, "existing": existed}
+    it = rows("SELECT * FROM item WHERE id=?", (iid,))[0]
+    if mode in ("search", "author") and it["status"] == "missing":  # already downloading or downloaded: do not grab twice
+        try: out["release"] = await search_item(it)
+        except HTTPException as e: out["search_error"] = e.detail
+    return out
 @app.delete("/api/v1/series/{sid}", dependencies=API)
 def series_del(sid: int):
-    db.execute("DELETE FROM item WHERE series_id=? AND status!='downloaded'", (sid,)); db.execute("UPDATE item SET series_id=NULL WHERE series_id=?", (sid,)); db.execute("DELETE FROM series WHERE id=?", (sid,)); db.commit(); return {}
+    sr = rows("SELECT provider FROM series WHERE id=?", (sid,))
+    # authors: forget the books you never picked; keep anything you monitored or downloaded. series: forget every issue not downloaded.
+    db.execute("DELETE FROM item WHERE series_id=? AND " + ("status='missing' AND monitored=0" if sr and sr[0]["provider"] == "author" else "status!='downloaded'"), (sid,)); db.execute("UPDATE item SET series_id=NULL WHERE series_id=?", (sid,)); db.execute("DELETE FROM series WHERE id=?", (sid,)); db.commit(); return {}
 @app.post("/api/v1/series/{sid}/refresh", dependencies=API)
 async def series_refresh(sid: int): return {"added": await sync_series(sid)}
 @app.post("/api/v1/series/{sid}/search", dependencies=API)
@@ -774,7 +1036,7 @@ def sysinfo():
     for n, pth in (("Comics", lib["comic"]), ("Ebooks", lib["ebook"]), ("Audiobooks", lib["audiobook"]), ("Downloads", lib["downloads"]), ("Config", str(DATA))):
         if os.path.exists(pth): u = shutil.disk_usage(pth); disks.append({"name": n, "path": pth, "free": u.free, "total": u.total})
     up = int(time.time() - START)
-    return {"version": "0.2.0", "uptime": f"{up // 3600}h {up % 3600 // 60}m", "disks": disks, "counts": status()["counts"]}
+    return {"version": "0.3.0", "uptime": f"{up // 3600}h {up % 3600 // 60}m", "disks": disks, "counts": status()["counts"]}
 @app.get("/api/v1/health", dependencies=API)
 async def health():
     out = []; add = lambda ok, name, msg: out.append({"ok": ok, "name": name, "message": msg})
@@ -798,6 +1060,9 @@ async def health():
     for t in TYPES:
         pth = cfg("library")[t]; ok = os.path.isdir(pth) and os.access(pth, os.W_OK); add(ok, f"{t.capitalize()} folder", pth if ok else f"{pth} is missing or not writable; mount it in Docker")
     if not cfg("metadata")["comicvineKey"]: add(False, "ComicVine", "No API key set: comic series monitoring is disabled")
+    if cfg("converter")["transmuteUrl"]:
+        t = await converter_test(); add(t["ok"], "Transmute converter", t["message"])
+    else: add(True, "Transmute converter", "Not set up (optional). Needed to convert formats and to make Kindle copies of EPUB-only books.")
     for d in sysinfo()["disks"]:
         if d["name"] != "Config" and d["free"] < 20 * 1024 ** 3: add(False, f"Disk space ({d['name']})", "Less than 20 GB free")
     return out
@@ -822,20 +1087,150 @@ def pse_page(iid: int, page: int):
     if not 0 <= page < len(names): raise HTTPException(404)
     with zipfile.ZipFile(r[0]["path"]) as z: data = z.read(names[page])
     return Response(data, media_type={"png": "image/png", "webp": "image/webp", "gif": "image/gif"}.get(names[page].lower().rsplit(".", 1)[-1], "image/jpeg"), headers={"Cache-Control": "max-age=3600"})
-def smtp_send(it):
-    e = cfg("email")
-    if not (e["smtpHost"] and e["kindleAddress"]): raise HTTPException(400, "Set your SMTP server and Kindle address in Settings > Email")
-    p = pathlib.Path(it["path"]); m = EmailMessage(); m["From"] = e["from"] or e["user"]; m["To"] = e["kindleAddress"]; m["Subject"] = it["title"]; m.set_content("Sent by Bookarr")
-    m.add_attachment(p.read_bytes(), maintype="application", subtype="octet-stream", filename=p.name)
-    with (smtplib.SMTP_SSL if int(e["smtpPort"]) == 465 else smtplib.SMTP)(e["smtpHost"], int(e["smtpPort"]), timeout=60) as s:
+# ---------- converting files with Transmute (http://your-transmute:3313, API key from its Settings > API keys) ----------
+JOBS = {}
+def tm_headers():
+    k = (cfg("converter")["transmuteKey"] or "").strip(); return {"Authorization": f"Bearer {k}"} if k else {}
+@app.post("/api/v1/converter/test", dependencies=API)
+async def converter_test():
+    url = norm_url(cfg("converter")["transmuteUrl"])
+    if not url: return {"ok": False, "message": "Enter your Transmute address first, like http://192.168.0.185:3313"}
+    try:
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as x:
+            r = await x.get(url + "/api/converters", headers=tm_headers())
+            if r.status_code == 401: return {"ok": False, "message": "Reached Transmute, but it rejected the API key. Create one in Transmute under Settings > API keys and paste it here."}
+            if r.status_code != 200 or "json" not in r.headers.get("content-type", ""): return {"ok": False, "message": f"That address answered (HTTP {r.status_code}) but not like Transmute. Use just http://ip:port."}
+            j = r.json(); n = len(j.get("converters", j) if isinstance(j, dict) else j)
+            return {"ok": True, "message": f"Connected to Transmute ({n} converters available)"}
+    except httpx.ConnectError: return {"ok": False, "message": f"Cannot connect to {url}. Check the address and port."}
+    except Exception as e: return {"ok": False, "message": f"Failed: {e}"}
+async def tm_convert(src, fmt):
+    """Upload src to Transmute, convert it to fmt, save the result next to the original (Book.epub -> Book.azw3). Returns the new path."""
+    src = pathlib.Path(src); fmt = fmt.lower().lstrip("."); dst = src.with_suffix("." + fmt)
+    if dst.exists(): return dst
+    url = norm_url(cfg("converter")["transmuteUrl"])
+    if not url: raise HTTPException(400, "Converting needs Transmute. Add its address and API key in Settings > Converter.")
+    async with httpx.AsyncClient(timeout=httpx.Timeout(3600, connect=15), headers=tm_headers(), follow_redirects=True) as x:
+        with open(src, "rb") as f: r = await x.post(url + "/api/files", files={"file": (src.name, f, "application/octet-stream")})
+        if r.status_code == 401: raise HTTPException(502, "Transmute rejected the API key (Settings > Converter).")
+        if r.status_code == 422: raise HTTPException(400, f"Transmute cannot convert {src.suffix.upper().lstrip('.')} files.")
+        if r.status_code != 200: raise HTTPException(502, f"Transmute upload failed (HTTP {r.status_code}).")
+        up = r.json()["metadata"]; fid = up["id"]; cid = None
+        try:
+            ok = up.get("compatible_formats") or {}
+            if ok and fmt not in ok: raise HTTPException(400, f"Transmute cannot turn {src.suffix.upper().lstrip('.')} into {fmt.upper()}. It can make: {', '.join(sorted(ok)).upper()}.")
+            c = await x.post(url + "/api/conversions", json={"id": fid, "output_format": fmt})
+            if c.status_code != 200: raise HTTPException(502, "Transmute: " + str((c.json() if "json" in c.headers.get("content-type", "") else {}).get("detail") or f"HTTP {c.status_code}"))
+            cid = c.json()["id"]; tmp = dst.with_name(dst.name + ".part")
+            async with x.stream("GET", f"{url}/api/files/{cid}") as d:
+                if d.status_code != 200: raise HTTPException(502, f"Could not download the converted file from Transmute (HTTP {d.status_code}).")
+                with open(tmp, "wb") as out:
+                    async for chunk in d.aiter_bytes(1 << 20): out.write(chunk)
+            os.replace(tmp, dst)
+        finally:  # tidy up Transmute's copies
+            for path in ([f"/api/conversions/{cid}"] if cid else []) + [f"/api/files/{fid}"]:
+                try: await x.delete(url + path)
+                except Exception: pass
+    log.info("Converted %s to %s", src.name, fmt.upper()); return dst
+async def run_job(jid):
+    j = JOBS[jid]
+    try:
+        j["result"] = str(await tm_convert(j["path"], j["to"])); j["state"] = "done"; j["message"] = f"Made {pathlib.Path(j['result']).name}"
+    except HTTPException as e: j["state"] = "failed"; j["message"] = e.detail
+    except Exception as e: j["state"] = "failed"; j["message"] = str(e)
+    if j["state"] == "failed": log.warning("Conversion of %s failed: %s", pathlib.Path(j["path"]).name, j["message"])
+@app.post("/api/v1/item/{iid}/convert", dependencies=API)
+async def item_convert(iid: int, request: Request):
+    b = await request.json(); r = rows("SELECT * FROM item WHERE id=?", (iid,))
+    if not r: raise HTTPException(404)
+    fs = [f["path"] for f in file_list(r[0]) if f["exists"]]; path = b.get("path") or r[0]["path"]
+    if path not in fs: raise HTTPException(400, "That file does not belong to this title.")
+    if (b.get("to") or "").lower() not in CONVERT_TO.get(r[0]["type"], []): raise HTTPException(400, "Pick one of: " + ", ".join(CONVERT_TO.get(r[0]["type"], [])))
+    if not norm_url(cfg("converter")["transmuteUrl"]): raise HTTPException(400, "Converting needs Transmute. Add its address and API key in Settings > Converter.")
+    jid = secrets.token_hex(4); JOBS[jid] = {"id": jid, "item_id": iid, "path": path, "to": b["to"].lower(), "state": "running", "message": "Converting…", "started": time.time()}
+    asyncio.create_task(run_job(jid)); return JOBS[jid]
+@app.get("/api/v1/convert/jobs", dependencies=API)
+def convert_jobs(item: int = None):
+    for k in [k for k, j in JOBS.items() if j["state"] != "running" and time.time() - j["started"] > 3600]: JOBS.pop(k)
+    return [j for j in JOBS.values() if item is None or j["item_id"] == item]
+
+# ---------- Kindle: email to Send-to-Kindle, or download a Kindle-ready file (USB or the Kindle's own web browser) ----------
+EMAIL_OK = (".epub", ".pdf", ".docx", ".txt")  # what Amazon's Send to Kindle accepts (it no longer takes MOBI/AZW3)
+def kindle_device_order():
+    return [".azw3", ".mobi"] if (cfg("email").get("kindleFormat") or "azw3").lower() != "mobi" else [".mobi", ".azw3"]
+async def kindle_ready(it, for_email):
+    """Pick (or make) the file a Kindle can open. Converts with Transmute when needed."""
+    fs = {pathlib.Path(f["path"]).suffix.lower(): f["path"] for f in file_list(it) if f["exists"]}
+    if not fs: raise HTTPException(404, "There is no downloaded file for this title yet.")
+    if it["type"] == "audiobook": raise HTTPException(400, "Kindles cannot play audiobook files.")
+    want = ([".epub", ".pdf"] if it["type"] == "ebook" else [".pdf"]) if for_email else (kindle_device_order() + [".pdf"] if it["type"] == "ebook" else [".pdf"])
+    for w in want:
+        if w in fs: return pathlib.Path(fs[w])
+    src = next((fs[e] for e in (".epub", ".azw3", ".mobi", ".kepub", ".fb2", ".cbz", ".cbr", ".cb7", ".pdf") if e in fs), next(iter(fs.values())))
+    target = want[0].lstrip(".")
+    try: return await tm_convert(src, target)
+    except HTTPException as e:
+        raise HTTPException(e.status_code, f"This title is only available as {', '.join(x.upper().lstrip('.') for x in fs)}, and making a Kindle copy ({target.upper()}) needs the converter: {e.detail}")
+def smtp_send(it, p):
+    e = cfg("email"); p = pathlib.Path(p)
+    if p.stat().st_size > 50 * 1048576: raise HTTPException(400, f"{p.name} is {p.stat().st_size // 1048576} MB. Send to Kindle only takes files up to 50 MB; use the Kindle download page or USB instead.")
+    m = EmailMessage(); m["From"] = e["from"] or e["user"]; m["To"] = e["kindleAddress"]; m["Subject"] = it["title"]; m.set_content("Sent by Bookarr")
+    mt = (MIME.get(p.suffix.lower()) or "application/octet-stream").split("/")
+    m.add_attachment(p.read_bytes(), maintype=mt[0], subtype=mt[1], filename=p.name)
+    with (smtplib.SMTP_SSL if int(e["smtpPort"]) == 465 else smtplib.SMTP)(e["smtpHost"], int(e["smtpPort"]), timeout=120) as s:
         if int(e["smtpPort"]) != 465: s.starttls()
         if e["user"]: s.login(e["user"], e["password"])
         s.send_message(m)
 @app.post("/api/v1/item/{iid}/send", dependencies=API)
 async def item_send(iid: int):
-    it = rows("SELECT * FROM item WHERE id=?", (iid,))[0]
-    if not it["path"] or not os.path.exists(it["path"]): raise HTTPException(404, "File not found on disk")
-    await asyncio.to_thread(smtp_send, it); return {"ok": True}
+    e = cfg("email")
+    if not (e["smtpHost"] and e["kindleAddress"]): raise HTTPException(400, "Set your SMTP server and Kindle address in Settings > Kindle")
+    it = rows("SELECT * FROM item WHERE id=?", (iid,))[0]; p = await kindle_ready(it, True)
+    await asyncio.to_thread(smtp_send, it, p); log.info("Sent %s to Kindle", p.name); return {"ok": True, "file": p.name}
+@app.post("/api/v1/kindle/send", dependencies=API)
+async def kindle_send_many(request: Request):
+    """Send several titles to Kindle in one go. Body: {"ids": [1,2,3]}"""
+    ok, bad = [], []
+    for iid in (await request.json()).get("ids", [])[:50]:
+        try: await item_send(iid); ok.append(iid)
+        except HTTPException as e: bad.append({"id": iid, "error": e.detail})
+        await asyncio.sleep(1)
+    return {"sent": len(ok), "failed": bad}
+@app.get("/api/v1/item/{iid}/kindle", dependencies=API)
+async def item_kindle(iid: int):
+    p = await kindle_ready(rows("SELECT * FROM item WHERE id=?", (iid,))[0], False)
+    return FileResponse(p, media_type=MIME.get(p.suffix.lower(), "application/octet-stream"), filename=p.name)
+
+KPAGE = 25
+@app.get("/kindle", dependencies=OA)
+def kindle_page(q: str = "", t: str = "ebook", sort: str = "title", page: int = 0):
+    """Plain page for the Kindle's own web browser: tap a title and the Kindle downloads it."""
+    k = OPDSKEY.get(); ks = f"&apikey={quote(k)}" if k else ""
+    t = t if t in ("ebook", "comic") else "ebook"
+    order = {"title": "title COLLATE NOCASE", "author": "author COLLATE NOCASE, title COLLATE NOCASE", "new": "added DESC"}.get(sort, "title COLLATE NOCASE")
+    its = rows(f"SELECT id,title,author,series,num FROM item WHERE type=? AND path IS NOT NULL AND status='downloaded' AND (title LIKE ? OR author LIKE ? OR series LIKE ?) ORDER BY {order} LIMIT ? OFFSET ?",
+               (t, f"%{q}%", f"%{q}%", f"%{q}%", KPAGE + 1, page * KPAGE))
+    link = lambda **kw: "/kindle?" + "&".join(f"{a}={quote(str(v))}" for a, v in {"q": q, "t": t, "sort": sort, "page": 0, **kw}.items()) + ks
+    tab = lambda v, l: f'<b>{l}</b>' if t == v else f'<a href="{xe(link(t=v))}">{l}</a>'
+    srt = lambda v, l: f'<b>{l}</b>' if sort == v else f'<a href="{xe(link(sort=v))}">{l}</a>'
+    li = "".join(f'<li><a href="/kindle/get/{i["id"]}?x=1{ks}">{xe(i["title"])}</a><br><small>{xe(i["author"] or i["series"] or "")}</small></li>' for i in its[:KPAGE]) or "<li>Nothing here yet.</li>"
+    nav = (f'<a href="{xe(link(page=page - 1))}">&laquo; Previous</a> ' if page else "") + (f'<a href="{xe(link(page=page + 1))}">Next &raquo;</a>' if len(its) > KPAGE else "")
+    html = (f'<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Bookarr for Kindle</title>'
+            '<style>body{font-family:serif;font-size:20px;margin:16px;color:#000;background:#fff}a{color:#000}li{margin:0 0 18px}small{color:#444}input{font-size:20px}</style></head><body>'
+            f'<h1>Bookarr</h1><p>{tab("ebook", "Ebooks")} &nbsp; {tab("comic", "Comics")}</p>'
+            f'<form action="/kindle"><input type="hidden" name="t" value="{t}">' + (f'<input type="hidden" name="apikey" value="{xe(k)}">' if k else "") +
+            f'<input name="q" value="{xe(q)}" placeholder="Search"> <input type="submit" value="Go"></form>'
+            f'<p>Sort: {srt("title", "Title")} &middot; {srt("author", "Author")} &middot; {srt("new", "Newest")}</p>'
+            f'<p><small>Tap a title to download it to this Kindle. The first download of a title can take up to a minute while Bookarr makes a Kindle copy.</small></p><ol start="{page * KPAGE + 1}">{li}</ol><p>{nav}</p></body></html>')
+    return Response(html, media_type="text/html")
+@app.get("/kindle/get/{iid}", dependencies=OA)
+async def kindle_get(iid: int):
+    r = rows("SELECT * FROM item WHERE id=?", (iid,))
+    if not r: raise HTTPException(404)
+    try: p = await kindle_ready(r[0], False)
+    except HTTPException as e:
+        return Response(f'<!doctype html><html><body style="font-size:20px;font-family:serif"><p>{xe(e.detail)}</p><p><a href="javascript:history.back()">Back</a></p></body></html>', status_code=e.status_code, media_type="text/html")
+    return FileResponse(p, media_type=MIME.get(p.suffix.lower(), "application/octet-stream"), filename=p.name)
 @app.get("/api/v1/device", dependencies=API)
 def devices(): return rows("SELECT * FROM device ORDER BY id")
 @app.post("/api/v1/device", dependencies=API)
