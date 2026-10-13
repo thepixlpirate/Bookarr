@@ -267,6 +267,11 @@ def history_clear(scope: str = "finished", blocklist: int = 0):
     n = db.execute("DELETE FROM grab" + ("" if scope == "all" else " WHERE state!='sent'")).rowcount
     if blocklist: db.execute("DELETE FROM blocklist")
     db.commit(); log.info("Cleared %d history entries", n); return {"cleared": n}
+@app.delete("/api/v1/item/{iid}/history", dependencies=API)
+def item_history_clear(iid: int, scope: str = "finished"):
+    """Clear the download history shown on one title's page. finished = keep downloads still running."""
+    n = db.execute("DELETE FROM grab WHERE item_id=?" + ("" if scope == "all" else " AND state!='sent'"), (iid,)).rowcount
+    db.commit(); return {"cleared": n}
 @app.delete("/api/v1/history/{gid}", dependencies=API)
 def history_del(gid: int): db.execute("DELETE FROM grab WHERE id=?", (gid,)); db.commit(); return {}
 @app.post("/api/v1/command/checkdownloads", dependencies=API)
