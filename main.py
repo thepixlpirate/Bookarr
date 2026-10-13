@@ -250,25 +250,57 @@ async def send_to_client(rel: dict, mtype: str, item_id: int = None):
     db.commit(); log.info("Grabbed %s via %s", rel["title"], kind); await notify("onGrab", f"Grabbed: {rel['title']}")
     return c["name"] or kind
 
+KIND = {"sabnzbd": "SABnzbd", "qbittorrent": "qBittorrent"}
+SAB_ST = {"Completed": "Finished, moving to your library", "Failed": "Failed", "Extracting": "Unpacking", "Verifying": "Checking files", "Repairing": "Repairing",
+          "Moving": "Finishing up", "Running": "Finishing up", "Queued": "Waiting in line", "QuickCheck": "Checking files", "Fetching": "Getting extra blocks", "Paused": "Paused"}
+QB_ST = {"downloading": "Downloading", "forcedDL": "Downloading", "metaDL": "Getting torrent info", "stalledDL": "Stalled (no one sharing right now)", "queuedDL": "Waiting in line",
+         "pausedDL": "Paused", "stoppedDL": "Paused", "checkingDL": "Checking files", "checkingResumeData": "Checking files", "allocating": "Preparing", "moving": "Moving",
+         "error": "Error", "missingFiles": "Files missing"}
+def secs(n):
+    if n is None or n < 0 or n >= 8640000: return None
+    return f"{n // 3600}h {n % 3600 // 60}m" if n >= 3600 else f"{n // 60}m {n % 60}s" if n >= 60 else f"{n}s"
+async def live_progress():
+    """Where every Bookarr download stands right now: percent done, time left, and which app is downloading it."""
+    gs = rows("SELECT g.*, c.kind, c.url, c.apikey, c.username, c.password, c.name cname FROM grab g JOIN client c ON c.id=g.client_id WHERE g.state='sent' AND g.dl_id IS NOT NULL ORDER BY g.id")
+    out, groups = {}, collections.defaultdict(list)
+    for g in gs:
+        groups[g["client_id"]].append(g)
+        out[g["id"]] = {"grab_id": g["id"], "item_id": g["item_id"], "title": g["title"], "type": g["type"], "client": g["cname"] or KIND[g["kind"]], "kind": KIND[g["kind"]],
+                        "progress": None, "status": "Sent", "eta": None, "speed": None, "problem": g["note"], "created": g["created"]}
+    for glist in groups.values():
+        c = glist[0]; url = norm_url(c["url"])
+        try:
+            async with httpx.AsyncClient(timeout=10, follow_redirects=True) as x:
+                if c["kind"] == "sabnzbd":
+                    q = (await x.get(url + "/api", params={"mode": "queue", "apikey": c["apikey"], "output": "json", "limit": 500})).json()["queue"]
+                    qs = {s["nzo_id"]: s for s in q.get("slots", [])}; hist = None
+                    for g in glist:
+                        o = out[g["id"]]; s = qs.get(g["dl_id"])
+                        if s:
+                            o.update(progress=float(s.get("percentage") or 0), status="Downloading" if s.get("status") == "Downloading" else SAB_ST.get(s.get("status"), s.get("status")),
+                                     eta=s.get("timeleft") if s.get("status") == "Downloading" else None, speed=(str(q.get("speed") or "").strip() + "B/s") if s.get("status") == "Downloading" and q.get("speed") else None)
+                            continue
+                        if hist is None: hist = {h["nzo_id"]: h for h in (await x.get(url + "/api", params={"mode": "history", "apikey": c["apikey"], "output": "json", "limit": 200})).json()["history"]["slots"]}
+                        h = hist.get(g["dl_id"])
+                        if h: o.update(progress=100.0, status=SAB_ST.get(h["status"], h["status"]))
+                else:
+                    await qb_login(x, c)
+                    for g in glist:
+                        ts = (await x.get(url + "/api/v2/torrents/info", params={"tag": g["dl_id"]}, headers={"Referer": url})).json()
+                        if not ts: continue
+                        t = ts[0]; done = t["progress"] >= 1
+                        out[g["id"]].update(progress=round(t["progress"] * 100, 1), status="Finished, moving to your library" if done else QB_ST.get(t["state"], t["state"]),
+                                            eta=None if done else secs(t.get("eta")), speed=f"{t['dlspeed'] / 1048576:.1f} MB/s" if t.get("dlspeed") and not done else None)
+        except Exception as e:
+            for g in glist: out[g["id"]]["status"] = f"Could not reach {c['cname'] or KIND[c['kind']]}"
+            log.info("Progress check for %s failed: %s", c["cname"], e)
+    return list(out.values())
 @app.get("/api/v1/queue", dependencies=API)
-async def queue():
-    out = []
-    for c in rows("SELECT * FROM client WHERE enabled=1 AND kind='sabnzbd'"):
-        try:
-            async with httpx.AsyncClient(timeout=10) as x:
-                j = (await x.get(c["url"] + "/api", params={"mode": "queue", "apikey": c["apikey"], "output": "json"})).json()
-            out += [{"title": s["filename"], "progress": s["percentage"], "status": s["status"], "client": c["name"]} for s in j["queue"]["slots"]]
-        except Exception as e: log.warning("Queue fetch failed: %s", e)
-    for g in rows("SELECT g.dl_id, g.title, c.url, c.username, c.password, c.name FROM grab g JOIN client c ON c.id=g.client_id WHERE g.state='sent' AND g.protocol!='usenet'"):
-        try:
-            async with httpx.AsyncClient(timeout=10) as x:
-                await qb_login(x, g)
-                for t in (await x.get(g["url"] + "/api/v2/torrents/info", params={"tag": g["dl_id"]})).json():
-                    out.append({"title": t["name"], "progress": round(t["progress"] * 100), "status": t["state"], "client": g["name"]})
-        except Exception as e: log.warning("Torrent queue fetch failed: %s", e)
-    return out
+async def queue(item: int = None):
+    return [q for q in await live_progress() if item is None or q["item_id"] == item]
+HISTQ = "SELECT g.*, c.name client_name, c.kind client_kind FROM grab g LEFT JOIN client c ON c.id=g.client_id"
 @app.get("/api/v1/history", dependencies=API)
-def history(): return rows("SELECT * FROM grab ORDER BY id DESC LIMIT 200")
+def history(): return rows(HISTQ + " ORDER BY g.id DESC LIMIT 200")
 @app.delete("/api/v1/history", dependencies=API)
 def history_clear(scope: str = "finished", blocklist: int = 0):
     """finished = imported + failed (default). all = also forget downloads still running (Bookarr will not import those)."""
@@ -414,7 +446,7 @@ async def upd_item(iid: int, request: Request):
 def del_item(iid: int, deleteFile: int = 0):
     r = rows("SELECT path FROM item WHERE id=?", (iid,))
     if deleteFile and r and r[0]["path"] and os.path.exists(r[0]["path"]): os.remove(r[0]["path"]); prune_empty(os.path.dirname(r[0]["path"]))
-    db.execute("DELETE FROM item WHERE id=?", (iid,)); db.commit(); return {}
+    db.execute("DELETE FROM item WHERE id=?", (iid,)); db.commit(); drop_cover(iid); return {}
 def add_size(its):
     for i in its: i["file_size"] = os.path.getsize(i["path"]) if i.get("path") and os.path.exists(i["path"]) else None
     return its
@@ -465,7 +497,7 @@ def prune_empty(d):  # remove now-empty series/author folders, never the library
 def item_get(iid: int):
     r = rows("SELECT * FROM item WHERE id=?", (iid,))
     if not r: raise HTTPException(404, "That title is no longer in Bookarr.")
-    it = add_size(r)[0]; it["files"] = file_list(it); it["history"] = rows("SELECT * FROM grab WHERE item_id=? ORDER BY id DESC LIMIT 20", (iid,))
+    it = add_size(r)[0]; it["files"] = file_list(it); it["history"] = rows(HISTQ + " WHERE g.item_id=? ORDER BY g.id DESC LIMIT 20", (iid,))
     it["meta"] = item_meta(it); it["convert_to"] = CONVERT_TO.get(it["type"], [])
     it["follow"] = rows("SELECT id, title, provider FROM series WHERE id=?", (it["series_id"],)) if it.get("series_id") else []
     if not it["follow"] and it.get("author"):
@@ -636,7 +668,7 @@ async def refresh_item(iid):
     for k in ("description", "cover", "author", "year", "publisher", "provider", "ext_id", "series", "release_date"):
         if best.get(k) and (k in ("description", "cover", "provider", "ext_id") or not it[k]): db.execute(f"UPDATE item SET {k}=? WHERE id=?", (best[k], iid))
     db.execute("UPDATE item SET meta=? WHERE id=?", (json.dumps({**item_meta(it), **best.get("meta", {})}), iid))
-    db.commit(); (COVERS / f"{iid}.img").unlink(missing_ok=True); return True
+    db.commit(); drop_cover(iid); return True
 @app.post("/api/v1/item/{iid}/refresh", dependencies=API)
 async def refresh(iid: int):
     if not await refresh_item(iid): raise HTTPException(404, "No metadata match found")
@@ -660,9 +692,19 @@ def local_cover(path):
             n = sorted(n for n in z.namelist() if n.lower().endswith((".jpg", ".jpeg", ".png", ".webp")) and (p.suffix.lower() == ".cbz" or "cover" in n.lower()))
             return z.read(n[0]) if n else None
     except Exception: return None
+for _f in COVERS.glob("*.img"):  # old cache files were named only by number and could be reused by a new title with the same number
+    if "-" not in _f.stem: _f.unlink(missing_ok=True)
+def cover_key(iid):
+    it = rows("SELECT cover, path FROM item WHERE id=?", (iid,))
+    if not it: return None
+    import hashlib; return COVERS / f"{iid}-{hashlib.md5(((it[0]['cover'] or '') + '|' + (it[0]['path'] or '')).encode()).hexdigest()[:10]}.img"
+def drop_cover(iid):
+    for f in COVERS.glob(f"{iid}-*.img"): f.unlink(missing_ok=True)
 async def cover_file(iid):
-    f = COVERS / f"{iid}.img"
+    f = cover_key(iid)
+    if not f: raise HTTPException(404)
     if not f.exists():
+        drop_cover(iid)
         it = rows("SELECT cover, path FROM item WHERE id=?", (iid,)); data = None
         if it and it[0]["cover"]:
             try:
@@ -767,16 +809,38 @@ def dest_for(t, it, title, src):
     d = root / safe(it.get("series") or it.get("title") or title) if t == "comic" else root / safe(it.get("author") or "Unknown Author")
     if t == "audiobook": d = d / safe(it.get("title") or title)
     return d / safe(src.name)
+def plain_copy(src, dst):
+    """Copy only the file's contents. NTFS and other unassigned drives refuse permission/owner/timestamp changes
+    ("Operation not permitted"), which made the old copy fail after the data was already written."""
+    tmp = dst.with_name(dst.name + ".part")
+    try:
+        shutil.copyfile(src, tmp); os.replace(tmp, dst)
+    finally:
+        if tmp.exists(): tmp.unlink(missing_ok=True)
+    try: os.utime(dst, (os.stat(src).st_atime, os.stat(src).st_mtime))
+    except OSError: pass
 def transfer(src, dst, protocol):
-    dst.parent.mkdir(parents=True, exist_ok=True); n = 1
-    while dst.exists(): dst = dst.with_name(f"{dst.stem} ({n}){dst.suffix}"); n += 1
+    dst.parent.mkdir(parents=True, exist_ok=True)
     mode = cfg("media")["importMode"]; mode = ("hardlink" if protocol != "usenet" else "move") if mode == "auto" else mode
-    if mode == "move": shutil.move(str(src), dst)
-    else:
-        try:
-            if mode == "hardlink": os.link(src, dst)
-            else: shutil.copy2(src, dst)
-        except OSError: shutil.copy2(src, dst)
+    try: same = dst.exists() and dst.stat().st_size == src.stat().st_size
+    except OSError: same = False
+    if same:  # an earlier try already put this exact file there: use it instead of making "Book (1).epub"
+        if mode == "move":
+            try: os.remove(src)
+            except OSError: pass
+        return dst
+    n = 1
+    while dst.exists(): dst = dst.with_name(f"{dst.stem} ({n}){dst.suffix}"); n += 1
+    if mode == "move":
+        try: os.rename(src, dst)  # same drive: instant
+        except OSError:
+            plain_copy(src, dst)
+            try: os.remove(src)
+            except OSError as e: log.warning("Copied %s but could not remove the download copy: %s", src.name, e)
+    elif mode == "hardlink":
+        try: os.link(src, dst)
+        except OSError: plain_copy(src, dst)  # different drives cannot share a file, so copy (the torrent keeps seeding the original)
+    else: plain_copy(src, dst)
     return dst
 def import_grab(g, src_path):
     t = g["type"]; it = (rows("SELECT * FROM item WHERE id=?", (g["item_id"],)) or [{}])[0]
@@ -787,7 +851,13 @@ def import_grab(g, src_path):
         dst = transfer(f, dest_for(t, it, g["title"], f), g["protocol"])
         if n == 0 and it: db.execute("UPDATE item SET path=?, status='downloaded' WHERE id=?", (str(dst), it["id"])); ids.append(it["id"])
         else: ids.append(db.execute("INSERT INTO item(type,title,series,author,path,status) VALUES(?,?,?,?,?,'downloaded')", (t, dst.stem, it.get("series") or it.get("title"), it.get("author"), str(dst))).lastrowid)
-    db.commit(); return ids
+    db.commit()
+    # usenet: remove the leftover job folder (nfo/par2 files) so downloads/Books/<Type> stays empty
+    base = pathlib.Path(mapped(src_path)); mode = cfg("media")["importMode"]
+    if g["protocol"] == "usenet" and mode in ("auto", "move") and base.is_dir() and base.parent.name in FOLDER.values():
+        left = [f for f in base.rglob("*") if f.is_file() and f.suffix.lower() in ALLFMT[t] | EXT[t]]
+        if not left: shutil.rmtree(base, ignore_errors=True)
+    return ids
 def fail_grab(g, note):
     db.execute("UPDATE grab SET state='failed', note=? WHERE id=?", (note, g["id"])); db.execute("INSERT OR IGNORE INTO blocklist VALUES(?)", (g["title"],))
     if g["item_id"]: db.execute("UPDATE item SET status='missing' WHERE id=? AND status='wanted'", (g["item_id"],))
@@ -809,7 +879,7 @@ async def check_downloads():
                     if ts and ts[0]["progress"] >= 1: done = ts[0].get("content_path") or os.path.join(ts[0]["save_path"], ts[0]["name"])
                     elif ts and ts[0]["state"] in ("error", "missingFiles"): fail_grab(g, ts[0]["state"]); continue
             if done:
-                ids = import_grab(g, done); db.execute("UPDATE grab SET state='imported' WHERE id=?", (g["id"],)); db.commit(); log.info("Imported %s (%d file(s))", g["title"], len(ids))
+                ids = import_grab(g, done); db.execute("UPDATE grab SET state='imported', note=NULL WHERE id=?", (g["id"],)); db.commit(); log.info("Imported %s (%d file(s))", g["title"], len(ids))
                 await notify("onImport", f"Imported: {g['title']}")
                 for i in ids:
                     if not rows("SELECT description FROM item WHERE id=?", (i,))[0]["description"]:
