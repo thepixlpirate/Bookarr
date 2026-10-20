@@ -62,7 +62,13 @@ a.l{color:var(--bl)}.msg{color:var(--te);margin-left:10px}
 .syn{white-space:pre-line;max-width:780px}.syn.cut{max-height:9.5em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 60%,transparent)}
 .dt{display:grid;grid-template-columns:130px minmax(0,1fr);gap:6px 14px;max-width:780px;margin:14px 0}.dt dt{color:var(--mu)}.dt dd{margin:0;overflow-wrap:anywhere}
 .rr .tags{margin-top:4px;display:flex;flex-wrap:wrap;gap:2px 0;align-items:center}.rr .tags .lk{padding:0 8px;font-size:13px}.pill.pk{border-color:var(--te);color:var(--te)}.pill.wr{border-color:#d9a54a;color:#e8bd6a}.rr.pick{background:#2dd4bf0d}.peek{font-size:13px;margin-top:4px}.peek table td{padding:3px 8px}.pb{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:2px 0 4px}.pb i{display:block;height:100%;background:var(--bl);border-radius:4px;transition:width .5s}
-.dlbox{background:var(--g2);border-radius:4px;padding:8px 12px;margin:-4px 0 12px}.bad{color:#f08aa0;display:block;margin-top:2px}.pill{display:inline-block;border:1px solid var(--line);border-radius:12px;padding:1px 9px;margin:0 4px 4px 0;font-size:12px;color:#c9ccd8}
+.dlbox{background:var(--g2);border-radius:4px;padding:8px 12px;margin:-4px 0 12px}.bad{color:#f08aa0;display:block;margin-top:2px}.po .ck{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:2px solid #fff;background:#0009;z-index:3;display:none;place-items:center;font-style:normal}
+.selmode .po .ck{display:grid}.pc.sel .ck{background:var(--pu);border-color:var(--pu)}.pc.sel .ck:after{content:"✓";color:#fff;font-size:15px;font-weight:700}.pc.sel .po{outline:3px solid var(--pu);outline-offset:-1px}
+.selmode .pc{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}.pc{-webkit-touch-callout:none}
+.selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:15;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--g1);border:1px solid var(--pu);border-radius:8px;padding:10px 12px;box-shadow:0 8px 30px #000a;width:min(760px,calc(100vw - 24px))}
+.selbar .sp{flex:1}.selmode main{padding-bottom:110px}.selmode .toast{bottom:120px}
+@media(max-width:760px){.selbar{left:0;right:0;transform:none;bottom:0;width:100%;border-radius:0;border-width:1px 0 0;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}.selbar button{flex:1 1 auto}.selbar .sp{display:none}.selbar b{flex:1 1 100%}.selmode .toast{bottom:150px}.selmode main{padding-bottom:170px}}
+.pill{display:inline-block;border:1px solid var(--line);border-radius:12px;padding:1px 9px;margin:0 4px 4px 0;font-size:12px;color:#c9ccd8}
 .help{color:var(--mu);font-size:13px;margin:8px 0 0;max-width:640px}.help b{color:var(--tx)}
 button.lk{background:none;border:0;color:var(--bl);padding:7px 4px;text-decoration:underline}
 .cv{display:flex;gap:6px;align-items:center;margin-top:4px}.cv select{padding:4px 6px}.cv button{padding:4px 10px}
@@ -104,7 +110,7 @@ function chrome(){setTimeout(centerNav,0);$('#nav').innerHTML=`<div class="logo"
 const st=i=>i.status=='downloaded'?'have':i.status=='wanted'?'want':i.monitored?'miss':'off';
 const BL={have:'Downloaded',want:'Downloading',miss:'Missing',off:'Not monitored'};
 function poster(i,src,lib){const k=REG.push(i)-1;let s=st(i),b=lib?(i._b||BL[s]):'';if(lib&&!i._s&&i.status=='downloaded'&&i.path&&i.file_size!=null)b='Downloaded, '+i.path.split('.').pop().toUpperCase();if(lib&&!i._s&&i.status=='downloaded'&&'file_size' in i&&i.file_size==null){s='miss';b='File missing'}
- return `<div class="pc ${lib?s:''}" tabindex=0 data-i="${k}"><div class="po">${src?`<img loading=lazy src="${esc(src)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc((i.title||'?').slice(0,2))}</span><span class="tag">${esc(i._tag||i.type)}</span>${b?`<span class="bd">${esc(b)}</span>`:''}<i class="bar"></i></div><b>${esc(i.title)}</b><small>${esc(i._sub||[i.author||i.series,i.year].filter(Boolean).join(', '))}</small></div>`}
+ return `<div class="pc ${lib?s:''} ${lib&&i.id&&!i._s&&SEL.has(i.id)?'sel':''}" tabindex=0 data-i="${k}"><div class="po">${lib&&!i._s?'<i class="ck"></i>':''}${src?`<img loading=lazy src="${esc(src)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc((i.title||'?').slice(0,2))}</span><span class="tag">${esc(i._tag||i.type)}</span>${b?`<span class="bd">${esc(b)}</span>`:''}<i class="bar"></i></div><b>${esc(i.title)}</b><small>${esc(i._sub||[i.author||i.series,i.year].filter(Boolean).join(', '))}</small></div>`}
 // ---------- library grid: filter chips, quick filter, sorting ----------
 const FL={all:()=>1,have:i=>i.status=='downloaded',miss:i=>i.status=='missing'&&i.monitored,want:i=>i.status=='wanted',off:i=>!i.monitored&&i.status!='downloaded'};
 const SORTS=[['added','Recently added'],['title','Title A–Z'],['author','Author A–Z'],['series','Series order'],['year','Newest year first'],['release','Release date'],['size','Biggest files'],['status','Status']];
@@ -114,25 +120,49 @@ const STO={downloaded:0,wanted:1,missing:2};
 const SORTF={added:(a,b)=>cmpS(b.added,a.added),title:(a,b)=>cmpS(bare(a.title),bare(b.title)),author:(a,b)=>cmpS(a.author,b.author)||cmpS(a.series,b.series)||(parseFloat(a.num)||0)-(parseFloat(b.num)||0)||cmpS(bare(a.title),bare(b.title)),
  series:(a,b)=>cmpS(a.series||a.title,b.series||b.title)||(parseFloat(a.num)||0)-(parseFloat(b.num)||0)||cmpS(a.title,b.title),year:(a,b)=>(b.year||0)-(a.year||0)||cmpS(a.title,b.title),
  release:(a,b)=>cmpS(b.release_date||'',a.release_date||''),size:(a,b)=>(b.file_size||0)-(a.file_size||0),status:(a,b)=>(STO[a.status]??3)-(STO[b.status]??3)||cmpS(a.title,b.title)};
-function drawLib(m,it){REG=[];const sk=store.get('sort.'+view,view=='wanted'?'release':'added'),qf=(drawLib.q||'').toLowerCase();
+let SEL=new Set(),SELON=0;
+function drawLib(m,it){REG=[];document.body.classList.toggle('selmode',!!SELON);const sk=store.get('sort.'+view,view=='wanted'?'release':'added'),qf=(drawLib.q||'').toLowerCase();
  const c=k=>it.filter(FL[k]).length,L=[['all','All'],['have','Downloaded'],['want','Downloading'],['miss','Missing'],['off','Not monitored']];
  const v=it.filter(FL[flt]).filter(i=>!qf||[i.title,i.author,i.series,i.publisher].join(' ').toLowerCase().includes(qf)).sort(SORTF[sk]||SORTF.added);
  const sa=view=='comic'?it.filter(i=>i.type=='comic'&&!i.series_id).length:0;
  m.innerHTML=`<div class="bar2"><div class="chips">${L.map(([k,l])=>`<button class="${flt==k?'on':''}" data-f="${k}">${l} (${c(k)})</button>`).join('')}</div><span class="sp"></span>
- <input type="search" id="lf" placeholder="Filter this list" value="${esc(drawLib.q||'')}"><select id="ls" aria-label="Sort">${SORTS.map(([k,l])=>`<option value="${k}" ${sk==k?'selected':''}>Sort: ${l}</option>`).join('')}</select></div>`+
+ <button id="selbtn">${SELON?'Done selecting':'Select'}</button><input type="search" id="lf" placeholder="Filter this list" value="${esc(drawLib.q||'')}"><select id="ls" aria-label="Sort">${SORTS.map(([k,l])=>`<option value="${k}" ${sk==k?'selected':''}>Sort: ${l}</option>`).join('')}</select></div>`+
  (sa?`<div class="note">${sa} comic${sa>1?'s are':' is'} not part of a followed series. Open one and tap <b>Find series</b> to track the whole run.</div>`:'')+
  (v.length?`<div class="grid">${v.map(i=>poster(i,coverUrl(i),1)).join('')}</div>`:'<div class="empty">Nothing matches this filter.</div>');
  m.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{flt=b.dataset.f;drawLib(m,it)});
  $('#ls').onchange=e=>{store.set('sort.'+view,e.target.value);drawLib(m,it)};
- libProgress(m,it);$('#lf').oninput=e=>{drawLib.q=e.target.value;clearTimeout(drawLib.t);drawLib.t=setTimeout(()=>{const p=e.target.selectionStart;drawLib(m,it);const f=$('#lf');f.focus();f.setSelectionRange(p,p)},250)};bindPosters()}
+ drawLib.v=v;libProgress(m,it);$('#lf').oninput=e=>{drawLib.q=e.target.value;clearTimeout(drawLib.t);drawLib.t=setTimeout(()=>{const p=e.target.selectionStart;drawLib(m,it);const f=$('#lf');f.focus();f.setSelectionRange(p,p)},250)};bindPosters();bindSelect(m,it)}
 async function libProgress(m,it){clearTimeout(LPOLL);if(!it.some(i=>i.status=='wanted'))return;const v=view;let q;try{q=await api('queue')}catch(e){return}
  if(view!=v||!m.isConnected||term)return;const by={};q.forEach(x=>{if(x.item_id)by[x.item_id]=x});
  m.querySelectorAll('.pc').forEach(p=>{const i=REG[p.dataset.i],x=i&&by[i.id];if(!x)return;const b=p.querySelector('.bd'),bar=p.querySelector('.bar');
   if(b)b.textContent=x.problem?'Needs attention':(x.progress!=null&&x.progress<100?'Downloading '+Math.floor(x.progress)+'%':x.status.split(',')[0]);
   if(bar&&x.progress!=null)bar.style.background=`linear-gradient(90deg,var(--bl) ${x.progress}%,var(--line) ${x.progress}%)`});
  if(q.length)LPOLL=setTimeout(()=>libProgress(m,it),8000)}
+// ---------- select several titles (Select button, right-click, or press-and-hold on a phone) ----------
+function bindSelect(m,it){const redraw=()=>drawLib(m,it),toggle=i=>{SEL.has(i.id)?SEL.delete(i.id):SEL.add(i.id)};
+ $('#selbtn').onclick=()=>{SELON=SELON?0:1;if(!SELON)SEL.clear();redraw()};
+ m.querySelectorAll('.grid .pc').forEach(p=>{const i=REG[p.dataset.i];if(!i||!i.id||i._s)return;let t=0,held=0;
+  p.oncontextmenu=e=>{e.preventDefault();SELON=1;toggle(i);redraw()};
+  p.addEventListener('touchstart',()=>{held=0;t=setTimeout(()=>{held=1;SELON=1;toggle(i);if(navigator.vibrate)navigator.vibrate(20);redraw()},550)},{passive:true});
+  ['touchend','touchmove','touchcancel'].forEach(ev=>p.addEventListener(ev,()=>clearTimeout(t),{passive:true}));
+  p.onclick=e=>{if(held){held=0;return}if(SELON){toggle(i);redraw()}else location.hash='#/item/'+i.id}});
+ selBar(m,it)}
+function selBar(m,it){let b=$('#selbar');if(!SELON){if(b)b.remove();document.body.classList.remove('selmode');return}
+ if(!b){b=document.createElement('div');b.id='selbar';b.className='selbar';document.body.appendChild(b)}
+ const shown=drawLib.v||[],all=shown.length&&shown.every(i=>SEL.has(i.id));
+ b.innerHTML=`<b>${SEL.size} selected</b><button id="sa">${all?'Unselect all':'Select all ('+shown.length+')'}</button><span class="sp"></span><button id="smon" ${SEL.size?'':'disabled'}>Monitor</button><button id="sunm" ${SEL.size?'':'disabled'}>Unmonitor</button><button class="dg" id="sdel" ${SEL.size?'':'disabled'}>Delete…</button><button id="sx">Done</button>`;
+ const redraw=()=>drawLib(m,it),q=x=>b.querySelector(x),done=()=>{SEL.clear();SELON=0;selBar(m,it)};
+ q('#sa').onclick=()=>{all?shown.forEach(i=>SEL.delete(i.id)):shown.forEach(i=>SEL.add(i.id));redraw()};
+ q('#sx').onclick=()=>{done();redraw()};
+ const mon=async a=>{const r=await send('item/bulk','POST',{ids:[...SEL],action:a});toast((a=='monitor'?'Monitoring ':'Stopped monitoring ')+r.updated+' title'+(r.updated==1?'':'s'));done();go()};
+ q('#smon').onclick=()=>mon('monitor');q('#sunm').onclick=()=>mon('unmonitor');
+ q('#sdel').onclick=async()=>{const ids=[...SEL],n=ids.length,sel=it.filter(i=>SEL.has(i.id)),withFiles=sel.filter(i=>i.path).length,w=n==1?'this title':'these '+n+' titles';
+  const c=await dlg(`<b>Delete ${w}?</b><br><span class="mu">${sel.slice(0,5).map(i=>esc(i.title)).join(', ')}${n>5?' and '+(n-5)+' more':''}</span>`,
+   withFiles?[['Remove from Bookarr, keep the files on disk',''],['Remove and delete the files from disk','dg']]:[['Remove from Bookarr','dg']]);if(c<0)return;
+  const del=withFiles&&c==1;if(del&&await dlg(`<b>Permanently delete the files for ${withFiles} title${withFiles==1?'':'s'}?</b><br><span class="mu">This removes them from your Books drive. It cannot be undone.</span>`,[['Yes, delete the files','dg']])<0)return;
+  try{const r=await send('item/bulk','POST',{ids,action:'delete',deleteFiles:del});toast('Removed '+r.removed+' title'+(r.removed==1?'':'s')+(del?' and deleted '+r.deleted_files+' file'+(r.deleted_files==1?'':'s'):'. Files were kept.'));done();go()}catch(e){toast(e.message,1)}}}
 function bindPosters(){document.querySelectorAll('.pc').forEach(p=>{p.onclick=()=>{const i=REG[p.dataset.i];i._s?location.hash='#/series/'+i.id:i.id?location.hash='#/item/'+i.id:modal(i)};p.onkeydown=e=>{if(e.key=='Enter')p.click()}})}
-async function go(){clearTimeout(LPOLL);clearTimeout(POLL);chrome();REG=[];const m=$('#m');m.innerHTML='<div class="empty">Loading…</div>';
+async function go(){clearTimeout(LPOLL);clearTimeout(POLL);if(go.v!==view){SEL.clear();SELON=0;const b=$('#selbar');if(b)b.remove();document.body.classList.remove('selmode')}go.v=view;chrome();REG=[];const m=$('#m');m.innerHTML='<div class="empty">Loading…</div>';
  try{if(view=='settings')return await settings(m);
   if(term){const tv=baseType(view),r=await api('lookup?term='+encodeURIComponent(term)+'&types='+Object.keys(types).filter(k=>types[k]&&(!T1[tv]||tv==k)).join(','));
    m.innerHTML=`<div class="bar2"><span class="mu">Results for <b style="color:var(--tx)">${esc(term)}</b>. Tap a title to see its details and add it.</span><span class="sp"></span><button id="cls">✕ Close search</button></div>`+(r.some(x=>x.type=='comic'&&x.provider!='comicvine')?'<div class="note">Comic results are limited without a ComicVine key. Add one in Settings &gt; Metadata to get real series and issue lists.</div>':'')+(r.length?`<div class="grid">${r.map(i=>poster(i,i.cover)).join('')}</div>`:'<div class="empty">No matches. Try fewer keywords, or check the metadata keys in Settings.</div>');$('#cls').onclick=closeSearch;return bindPosters()}
@@ -261,6 +291,7 @@ async function clientsView(o){const c=await api('downloadclient');
 function closeSearch(){nav('#/'+view)}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-back]');if(!b)return;e.preventDefault();if(history.length>1&&BACKOK)history.back();else nav('#/'+view)});
 let BACKOK=0;addEventListener('hashchange',()=>{BACKOK=1});
+document.addEventListener('keydown',e=>{if(e.key=='Escape'&&!document.querySelector('.ov')&&SELON){e.stopImmediatePropagation();$('#sx')?.click();return}},true);
 document.addEventListener('keydown',e=>{if(e.key=='Escape'&&!document.querySelector('.ov')){if(term&&!/^#\/(item|series)\//.test(location.hash))return closeSearch();const c=document.querySelector('#relx');if(c)c.click()}});
 document.addEventListener('keydown',e=>{if(e.key=='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){e.preventDefault();$('#q')?.focus()}});
 // ---------- followed authors / series ----------

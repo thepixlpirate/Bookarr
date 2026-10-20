@@ -9,7 +9,30 @@ from fastapi.responses import FileResponse, Response, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 DATA = pathlib.Path(os.getenv("DATA_DIR", "/config")); DATA.mkdir(parents=True, exist_ok=True)
-db = sqlite3.connect(DATA / "bookarr.db", check_same_thread=False); db.row_factory = sqlite3.Row
+import threading
+class _Result:
+    """A finished query: rows are read straight away, so another request can never read them by mistake."""
+    def __init__(self, cur):
+        self._rows = cur.fetchall() if cur.description else []; self.lastrowid = cur.lastrowid; self.rowcount = cur.rowcount
+    def fetchone(self): return self._rows[0] if self._rows else None
+    def fetchall(self): return list(self._rows)
+    def __iter__(self): return iter(self._rows)
+class _SafeDB:
+    """One shared database connection, used by one request at a time (Bookarr answers many requests at once, e.g. cover images)."""
+    def __init__(self, path):
+        self._c = sqlite3.connect(path, check_same_thread=False, timeout=30); self._c.row_factory = sqlite3.Row; self._lock = threading.RLock()
+        self._c.execute("PRAGMA journal_mode=WAL")
+    def execute(self, q, a=()):
+        with self._lock: return _Result(self._c.execute(q, a))
+    def executemany(self, q, a):
+        with self._lock: return _Result(self._c.executemany(q, a))
+    def executescript(self, q):
+        with self._lock: return self._c.executescript(q)
+    def commit(self):
+        with self._lock: self._c.commit()
+    def backup(self, dst):
+        with self._lock: self._c.commit(); self._c.backup(dst)
+db = _SafeDB(DATA / "bookarr.db")
 db.executescript("""
 CREATE TABLE IF NOT EXISTS item(id INTEGER PRIMARY KEY, type TEXT, title TEXT, author TEXT, series TEXT, year INT,
   monitored INT DEFAULT 1, status TEXT DEFAULT 'missing', path TEXT, added TEXT DEFAULT CURRENT_TIMESTAMP, release_date TEXT);
@@ -443,10 +466,32 @@ async def upd_item(iid: int, request: Request):
             db.execute(f"UPDATE item SET {k}=? WHERE id=?", (v, iid))
     db.commit(); return rows("SELECT * FROM item WHERE id=?", (iid,))[0]
 @app.delete("/api/v1/item/{iid}", dependencies=API)
-def del_item(iid: int, deleteFile: int = 0):
-    r = rows("SELECT path FROM item WHERE id=?", (iid,))
-    if deleteFile and r and r[0]["path"] and os.path.exists(r[0]["path"]): os.remove(r[0]["path"]); prune_empty(os.path.dirname(r[0]["path"]))
-    db.execute("DELETE FROM item WHERE id=?", (iid,)); db.commit(); drop_cover(iid); return {}
+def del_item(iid: int, deleteFile: int = 0): return {"deleted_files": remove_item(iid, bool(deleteFile))}
+def remove_item(iid, delete_files):
+    """Remove a title from Bookarr. With delete_files, also delete every file it owns (converted copies and audiobook parts too)."""
+    r = rows("SELECT * FROM item WHERE id=?", (iid,)); n = 0
+    if not r: return 0
+    if delete_files and r[0]["path"]:
+        folders = set()
+        for f in file_list(r[0]):
+            if f["exists"]:
+                try: os.remove(f["path"]); n += 1; folders.add(os.path.dirname(f["path"]))
+                except OSError as e: log.warning("Could not delete %s: %s", f["path"], e)
+        for d in folders: prune_empty(d)
+    db.execute("DELETE FROM item WHERE id=?", (iid,)); db.commit(); drop_cover(iid)
+    log.info("Removed %s%s", r[0]["title"], f" and deleted {n} file(s)" if n else "")
+    return n
+@app.post("/api/v1/item/bulk", dependencies=API)
+async def item_bulk(request: Request):
+    """Act on many titles at once. Body: {"ids": [...], "action": "delete" | "monitor" | "unmonitor", "deleteFiles": true/false}"""
+    b = await request.json(); ids = [int(i) for i in b.get("ids", [])]; a = b.get("action")
+    if a == "delete":
+        files = sum(remove_item(i, bool(b.get("deleteFiles"))) for i in ids)
+        return {"removed": len(ids), "deleted_files": files}
+    if a in ("monitor", "unmonitor"):
+        db.executemany("UPDATE item SET monitored=? WHERE id=?", [(1 if a == "monitor" else 0, i) for i in ids]); db.commit()
+        return {"updated": len(ids)}
+    raise HTTPException(400, "Unknown action")
 def add_size(its):
     for i in its: i["file_size"] = os.path.getsize(i["path"]) if i.get("path") and os.path.exists(i["path"]) else None
     return its
