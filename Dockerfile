@@ -4,6 +4,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY main.py entrypoint.sh ./
+COPY readarr_compat ./readarr_compat
+COPY mylar_compat ./mylar_compat
 RUN mkdir static
 COPY index.html static/index.html
 VOLUME /config

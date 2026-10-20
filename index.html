@@ -259,11 +259,12 @@ const NOTES={library:'<p class="note">Downloads stay in your downloads folder wh
  media:'<p class="note">Bookarr sends each download with its own category (comics, ebooks, audiobooks). With <b>Download subfolder</b> set to <b>Books</b>, your downloads folder ends up with <b>Books/Comics</b>, <b>Books/Ebooks</b> and <b>Books/Audiobooks</b>. After changing these, go to Settings &gt; Download clients and tap <b>Set up folders</b> on each client.</p>',
  email:'<p class="note"><b>Two ways to get books onto a Kindle.</b><br>1. <b>Send to Kindle</b> (email): fill in the boxes below, then tap Send to Kindle on any book. In your Amazon account, add the From address to the "Approved Personal Document E-mail List". Amazon takes EPUB and PDF; Bookarr makes an EPUB first when a book only exists as MOBI/AZW3 (needs the converter).<br>2. <b>Download on the Kindle itself</b>: open the Kindle web browser and go to the Kindle address shown under Settings &gt; Reader devices. Tap a title and it downloads. Bookarr makes an AZW3 copy when needed.</p>',
  converter:'<p class="note">Bookarr uses your <b>Transmute</b> server to turn files into other formats: ebooks (EPUB, AZW3, MOBI, PDF, KEPUB, FB2), comics (CBZ, PDF) and audiobooks (M4B, MP3, M4A). Converted copies are saved next to the original, so both show on the book\'s page.<br>Address: the local one works best, like <b>http://192.168.0.185:3313</b>. API key: in Transmute open Settings &gt; API keys and create one.</p>'};
-const SUBS=[['clients','Download clients'],['indexer','Indexers'],['media','Media'],['quality','Quality'],['metadata','Metadata'],['converter','Converter'],['email','Kindle'],['notifications','Notifications'],['library','Library'],['security','Security'],['devices','Reader devices'],['general','General'],['logs','Logs']];
+const SUBS=[['clients','Download clients'],['indexer','Indexers'],['media','Media'],['quality','Quality'],['metadata','Metadata'],['converter','Converter'],['seerrng','SeerrNG'],['email','Kindle'],['notifications','Notifications'],['library','Library'],['security','Security'],['devices','Reader devices'],['general','General'],['logs','Logs']];
 async function settings(m){m.innerHTML=`<div class="tabs">${SUBS.map(([k,l])=>`<button class="${sub==k?'on':''}" data-s="${k}">${l}</button>`).join('')}</div><div id="out"></div>`;
  document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>nav('#/settings/'+b.dataset.s));const o=$('#out');
  if(sub=='logs'){const l=await api('log');o.innerHTML='<div class="tw"><table>'+l.map(x=>`<tr><td>${esc(x.time)}<td>${x.level}<td class="fi">${esc(x.message)}</tr>`).join('')+'</table></div>';return}
  if(sub=='devices')return await devicesView(o);
+ if(sub=='seerrng')return await seerrngView(o);
  if(sub=='clients')return await clientsView(o);
  const v=await api('config/'+sub);
  o.innerHTML=(NOTES[sub]||'')+(sub=='general'?`<div class="f"><span>API key</span><input readonly value="${v.apiKey}"><span>OPDS catalog</span><input readonly value="${location.origin}/opds"></div>`:'')+`<div class="f">${(FORMS[sub]||[]).map(([k,l])=>`<span>${l}</span><input data-k="${k}" ${PW.has(k)?'type=password':''} value="${esc(v[k])}" autocapitalize=off>`).join('')}</div><button class="p" id=save>Save changes</button>
@@ -274,6 +275,21 @@ async function settings(m){m.innerHTML=`<div class="tabs">${SUBS.map(([k,l])=>`<
  if($('#ti'))$('#ti').onclick=()=>tst('indexer/test');if($('#tc'))$('#tc').onclick=()=>tst('converter/test');
  if($('#tn'))$('#tn').onclick=async()=>{await $('#save').onclick();await send('notification/test','POST');$('#msg').textContent='Test sent'};
  if($('#rm'))$('#rm').onclick=async()=>{$('#msg').textContent='Working…';const r=await send('metadata/refresh','POST');$('#msg').textContent='Updated '+r.updated+' of '+r.checked}}
+// ---------- Settings > SeerrNG: optional connectors so SeerrNG can send requests to Bookarr ----------
+async function seerrngView(o){const v=await api('config/seerrng'),host=location.hostname,port=location.port||(location.protocol=='https:'?'443':'80'),ssl=location.protocol=='https:';
+ const sw=(k,l,d)=>`<label class="ck" style="margin:10px 0;align-items:flex-start"><input type="checkbox" data-sw="${k}" ${+v[k]?'checked':''} style="margin-top:4px"><span><b style="color:var(--tx)">${l}</b><br><span class="mu">${d}</span></span></label>`;
+ const row=(l,val)=>`<span>${l}</span><input readonly value="${esc(val)}" onclick="this.select()">`;
+ o.innerHTML=`<p class="note">These let <b>SeerrNG</b> send requests to Bookarr. They are <b>off</b> until you tick them, and turning one off makes Bookarr act exactly as if it were not there.</p>
+ ${sw('readarrEnabled','Enable Readarr compatibility (for SeerrNG)','Ebook and audiobook requests. In SeerrNG add Bookarr as a Readarr / Bookshelf server, once for ebooks and once for audiobooks.')}
+ ${sw('mylarEnabled','Enable Mylar3 compatibility (for SeerrNG)','Comic requests. In SeerrNG add Bookarr as a Mylar3 server. Needs your ComicVine key in Settings &gt; Metadata.')}
+ ${sw('allowDeleteFiles','Allow SeerrNG to delete files','When off (recommended), removing something in SeerrNG removes it from Bookarr but always keeps the files on disk.')}
+ <span class="msg" id="msg"></span>
+ <h3>What to type into SeerrNG</h3><p class="mu">Settings &gt; Services. Use the same values for every Bookarr entry; only the URL Base changes.</p>
+ <div class="f">${row('Hostname or IP',host)}${row('Port',port)}${row('Use SSL',ssl?'Yes':'No')}${row('API key',KEY)}${row('URL Base (ebooks & audiobooks)','/readarr-compat')}${row('URL Base (comics, Mylar3)','/mylar-compat')}</div>
+ <p class="help">If SeerrNG runs on the same server, the local IP (like 192.168.0.185) and port 8787 is the most reliable choice.</p>`;
+ o.querySelectorAll('[data-sw]').forEach(c=>c.onchange=async()=>{const b={};o.querySelectorAll('[data-sw]').forEach(x=>b[x.dataset.sw]=x.checked?1:0);
+  if(c.dataset.sw=='allowDeleteFiles'&&c.checked&&!confirm('Let SeerrNG delete book files from your drive when you remove something there?')){c.checked=false;return}
+  await send('config/seerrng','PUT',b);$('#msg').style.color='var(--te)';$('#msg').textContent='✓ Saved'})}
 async function clientsView(o){const c=await api('downloadclient');
  o.innerHTML=(c.length?'<div class="tw"><table>'+c.map(x=>`<tr><td>${esc(x.name)}<td>${x.kind}<td>${esc(x.url)}<td id="cs${x.id}" class="mu">Checking…<td style="white-space:nowrap"><button data-t="${x.id}">Test</button> <button data-sf="${x.id}">Set up folders</button> <button data-e="${x.id}">Edit</button> <button class="dg" data-d="${x.id}">Remove</button></tr>`).join('')+'</table></div>':'<div class="empty">No download clients yet.</div>')+
  `<p class="help"><b>Set up folders</b> creates the comics, ebooks and audiobooks categories inside the client so downloads land in <b>downloads/Books/Comics</b>, <b>downloads/Books/Ebooks</b> and <b>downloads/Books/Audiobooks</b> (change the "Books" name under Settings &gt; Media).</p>

@@ -44,6 +44,18 @@ When a download finishes, Bookarr moves (usenet) or links/copies (torrents, so t
 - **Kindle web browser**: Settings > Reader devices > create a key, then open `http://<server>:8787/kindle?apikey=<key>` on the Kindle. Tap a title to download an AZW3 (or MOBI) copy.
 - **Download for Kindle** on any book's page gives you the Kindle file for USB.
 
+## SeerrNG (optional, off by default)
+Bookarr can take requests from [SeerrNG](https://github.com/snapetech-org/seerrng). Turn it on in **Settings > SeerrNG**; that page also shows exactly what to type into SeerrNG.
+
+- **Ebooks and audiobooks**: SeerrNG > Settings > Services > add a **Readarr / Bookshelf** server twice (one marked ebook, one marked audiobook). Hostname = your server IP, Port = 8787, URL Base = `/readarr-compat`, API key = Bookarr's API key.
+- **Comics**: add a **Mylar3** server. Same hostname, port and API key, URL Base = `/mylar-compat`. Needs a ComicVine key in Settings > Metadata.
+- **Allow SeerrNG to delete files** stays off unless you turn it on. While off, removing something in SeerrNG never deletes files.
+
+The connectors live in `readarr_compat/` and `mylar_compat/`. When a switch is off, its addresses answer 404 as if they did not exist.
+
+## Tests
+`pip install pytest` then `python -m pytest -q` from this folder. Tests use a throwaway database and fake internet answers; they never touch your real library.
+
 ## Readers
 OPDS catalog: `http://<server>:8787/opds`. Create one key per app in Settings > Reader devices. Comics support page streaming (OPDS-PSE).
 

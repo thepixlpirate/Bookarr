@@ -105,7 +105,7 @@ async def unexpected(request: Request, e: Exception):
 @app.middleware("http")
 async def basic_auth(request: Request, call_next):
     s = cfg("security")
-    if s["authMode"] == "basic" and not request.url.path.startswith(("/api/", "/opds", "/ping", "/kindle")):
+    if s["authMode"] == "basic" and not request.url.path.startswith(("/api/", "/opds", "/ping", "/kindle", "/readarr-compat", "/mylar-compat")):
         want = "Basic " + base64.b64encode(f'{s["username"]}:{s["password"]}'.encode()).decode()
         if request.headers.get("authorization") != want:
             return Response("Auth required", 401, {"WWW-Authenticate": 'Basic realm="Bookarr"'})
@@ -1482,6 +1482,10 @@ async def maint_loop():
             for s in rows("SELECT id FROM series WHERE monitored=1"): await sync_series(s["id"]); await asyncio.sleep(2)
         except Exception as e: log.warning("Maintenance: %s", e)
         await asyncio.sleep(12 * 3600)
+
+# ---------- optional SeerrNG connectors (each in its own folder; both OFF until enabled in Settings > SeerrNG) ----------
+import sys as _sys, readarr_compat, mylar_compat
+readarr_compat.register(app, _sys.modules[__name__]); mylar_compat.register(app, _sys.modules[__name__])
 
 SD = pathlib.Path(__file__).parent / "static"
 try:
