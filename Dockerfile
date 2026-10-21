@@ -7,6 +7,7 @@ COPY main.py entrypoint.sh ./
 COPY readarr_compat ./readarr_compat
 COPY mylar_compat ./mylar_compat
 RUN mkdir static
+COPY assets/ static/
 COPY index.html static/index.html
 VOLUME /config
 RUN chmod +x entrypoint.sh

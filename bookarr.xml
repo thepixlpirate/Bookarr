@@ -1,13 +1,14 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>bookarr</Name>
-  <Repository>ghcr.io/YOUR_GITHUB_USER/bookarr:latest</Repository>
-  <Registry>https://github.com/YOUR_GITHUB_USER/bookarr/pkgs/container/bookarr</Registry>
+  <Repository>ghcr.io/thepixlpirate/bookarr:latest</Repository>
+  <Registry>https://github.com/thepixlpirate/bookarr/pkgs/container/bookarr</Registry>
   <Network>bridge</Network>
   <Privileged>false</Privileged>
-  <Support>https://github.com/YOUR_GITHUB_USER/bookarr</Support>
+  <Support>https://github.com/thepixlpirate/bookarr</Support>
   <Overview>Download, organize and serve comics, ebooks and audiobooks. Uses Prowlarr, SABnzbd or qBittorrent, and serves an OPDS feed to reader apps.</Overview>
   <Category>MediaApp:Books Downloaders:</Category>
+  <Icon>https://raw.githubusercontent.com/thepixlpirate/Bookarr/main/assets/bookarr-256.png</Icon>
   <WebUI>http://[IP]:[PORT:8787]/</WebUI>
   <Config Name="WebUI Port" Target="8787" Default="8787" Mode="tcp" Description="Web UI, API and OPDS" Type="Port" Display="always" Required="true" Mask="false">8787</Config>
   <Config Name="Config" Target="/config" Default="/mnt/user/appdata/bookarr" Mode="rw" Description="Database, covers, backups" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/bookarr</Config>
