@@ -1,118 +1,261 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Bookarr</title><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="/bookarr.svg"><link rel="apple-touch-icon" href="/bookarr-256.png"><meta name="color-scheme" content="dark"><script src="/initialize.js"></script>
+<title>Bookarr</title><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="/bookarr.svg"><link rel="apple-touch-icon" href="/bookarr-256.png">
+<meta name="color-scheme" content="dark"><meta name="theme-color" content="#2a2a2a">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+<script src="/initialize.js"></script>
 <style>
-:root{color-scheme:dark;--black:#0a0a0f;--ink:#111118;--g1:#1a1b23;--g2:#23252f;--line:#2c2f3b;--tx:#e7e8ee;--mu:#8d90a0;--pu:#8b5cf6;--te:#2dd4bf;--bl:#4f9dff}
-*{box-sizing:border-box}body{margin:0;background:var(--ink);color:var(--tx);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;height:100dvh;overflow:hidden}html{height:100%;overflow:hidden;overscroll-behavior:none}
-nav{width:210px;flex:none;background:var(--black);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:12px 0;overflow:auto}
-.logo{display:flex;gap:10px;align-items:center;font-size:18px;font-weight:700;padding:4px 18px 18px}
-nav a{display:block;padding:9px 18px;color:var(--mu);cursor:pointer;border-left:3px solid transparent}nav a:hover{color:var(--tx);background:var(--g1)}
-nav a.on{color:var(--tx);background:var(--g1);border-left-color:var(--pu)}nav hr{border:0;border-top:1px solid var(--line);margin:10px 0;width:100%}
-.col{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
-header{background:var(--g1);border-bottom:1px solid var(--line);padding:10px 24px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-header h1{font-size:18px;margin:0 8px 0 0;font-weight:600}header .sp{flex:1}
-input,select,button{background:var(--g2);color:var(--tx);border:1px solid var(--line);border-radius:4px;padding:7px 10px;font:inherit}
-input::placeholder{color:#666a7a}button{cursor:pointer}button:hover{border-color:#464a5b}button.p{background:var(--te);border-color:var(--te);color:#04201c;font-weight:600}
-button.pu{background:var(--pu);border-color:var(--pu);color:#fff}button.dg{color:#f08aa0}:focus-visible{outline:2px solid var(--bl);outline-offset:1px}
-header input[type=search]{width:min(320px,100%)}label.ck{color:var(--mu);display:flex;gap:5px;align-items:center;cursor:pointer}label.ck input{accent-color:var(--pu)}
-main{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px;min-width:0;min-height:0}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:20px}
-.pc{cursor:pointer}.pc b{display:block;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pc small{display:block;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.po{position:relative;aspect-ratio:2/3;background:linear-gradient(160deg,var(--g2),var(--g1));border:1px solid var(--line);border-radius:3px;overflow:hidden}
-.po img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}.po .tag,.po .bd,.po .bar{z-index:2}.po .ph{position:absolute;inset:0;display:grid;place-items:center;font-size:34px;font-weight:700;color:#3a3d4d}
-.po .tag{position:absolute;top:6px;left:6px;background:#000a;color:#fff;font-size:11px;padding:1px 7px;border-radius:3px}
-.po .bar{position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--line)}
-.have .bar{background:var(--te)}.want .bar{background:var(--bl)}.miss .bar{background:var(--pu)}.pc:hover .po,.pc:focus-visible .po{border-color:var(--pu)}
-table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}th{color:var(--mu);font-weight:500}tr:hover td{background:var(--g1)}
-.empty{color:var(--mu);padding:48px 0;text-align:center}.mu{color:var(--mu)}h2{margin:0 0 8px}
-.tabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--line);flex-wrap:wrap}.tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;color:var(--mu);padding:9px 14px}
-.tabs button.on{color:var(--tx);border-bottom-color:var(--te)}
-.f{display:grid;grid-template-columns:200px minmax(0,1fr);gap:10px 16px;max-width:640px;margin-bottom:18px;align-items:center}
-.ov{position:fixed;inset:0;background:#000b;display:grid;place-items:center;padding:16px;z-index:9}
-.md{background:var(--g1);border:1px solid var(--line);border-radius:6px;width:min(900px,100%);max-height:92vh;overflow:auto;padding:22px}
-.mh{display:grid;grid-template-columns:170px 1fr;gap:22px}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.md .x{float:right}
-a.l{color:var(--bl)}.msg{color:var(--te);margin-left:10px}
-.tw{overflow-x:auto;max-width:100%}.pc{min-width:0}
-.bd{position:absolute;left:0;right:0;bottom:5px;font-size:11px;padding:2px 7px;background:#000b;color:#fff}.have .bd{color:var(--te)}.want .bd{color:var(--bl)}.miss .bd{color:#c4a8ff}
-.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:16px}.chips button{border-radius:16px;padding:5px 12px}.chips button.on{border-color:var(--te);color:var(--te)}
-.note{background:var(--g1);border:1px solid var(--line);border-left:3px solid var(--bl);border-radius:4px;padding:9px 12px;margin:10px 0;color:#c9ccd8}
-.sb{margin:6px 0;padding:6px 10px;border-radius:4px;background:var(--g2);border-left:3px solid var(--pu)}.sb.have{border-left-color:var(--te)}.sb.want{border-left-color:var(--bl)}
-.rr{display:grid;grid-template-columns:minmax(0,1fr) 72px 110px 74px 52px 48px 100px;gap:10px;padding:9px 10px;border-bottom:1px solid var(--line);align-items:center}
-.rr.rh{color:var(--mu);position:sticky;top:0;background:var(--g1);z-index:1}.rr.rh span{cursor:pointer;user-select:none}.rr.rh span:hover{color:var(--tx)}
-.rr .t{overflow-wrap:anywhere}.rr .c{color:var(--mu)}.rsort{display:none}.rr2{display:flex;gap:12px;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:min(560px,92vw);background:var(--g2);border:1px solid var(--te);border-radius:6px;padding:11px 16px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}
-.toast.show{opacity:1}.toast.bad{border-color:#f08aa0}
-@media(max-width:760px){html{height:auto;overflow:visible;overscroll-behavior:auto}body{display:block;height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:visible}.col{display:block}main{overflow:visible;min-height:0}
- nav{position:sticky;top:0;z-index:6;width:100%;flex:none;flex-direction:row;overflow-x:auto;padding:0;border-right:0;border-bottom:1px solid var(--line);overscroll-behavior-x:contain;scrollbar-width:none}nav::-webkit-scrollbar{display:none}
- .logo,nav hr{display:none}nav a{border-left:0;border-bottom:3px solid transparent;white-space:nowrap;padding:12px 14px}nav a.on{border-bottom-color:var(--pu)}
- header{padding:10px 12px;gap:8px}header h1,header .sp{display:none}header input[type=search]{flex:1 1 100%;width:100%}
- input,select{font-size:16px}button{min-height:40px}main{padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
- .grid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:12px}.f{grid-template-columns:1fr}.mh{grid-template-columns:96px 1fr;gap:12px}
- .ov{padding:0;align-items:stretch}.md{width:100%;max-height:100dvh;height:100dvh;border-radius:0;padding:14px}main table{display:block;overflow-x:auto}
- .tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.tabs button{white-space:nowrap}.bar2 input,.bar2 select{flex:1 1 150px;width:auto}.bar2 .sp{display:none}
- .acts button,.acts a{flex:1 1 auto}.dlbox{margin:0 0 12px}.toast{bottom:calc(12px + env(safe-area-inset-bottom))}
- main table.cards{display:block;overflow:visible}.cards tbody{display:block}.cards tr:first-child{display:none}
- .cards tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;padding:12px 2px;border-bottom:1px solid var(--line)}.cards td{border:0;padding:0;min-width:0}
- .cards td.fi{flex:1 1 100%;font-weight:500}.cards td:has(.pb){flex:1 1 100%}.cards .fold{display:none}.cards td:last-child{margin-left:auto}.cards .cv{flex-wrap:wrap}
- .rr.rh{display:none}.rsort{display:block;margin:0 0 8px;width:100%}.rr{display:flex;flex-wrap:wrap;gap:2px 12px;padding:12px 4px}.rr .t{flex:1 1 100%}.rr .c{font-size:12px}.rr .b{margin-left:auto}}
-.ip{display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;margin-bottom:24px}.ip .po{width:100%}.fi{overflow-wrap:anywhere}.fi small{display:block;color:var(--mu)}
-.dgl{max-width:480px;height:auto!important;align-self:center}h3{margin:24px 0 8px}
-@media(max-width:760px){.ip{grid-template-columns:104px minmax(0,1fr);gap:12px}}
-.mob{display:none}nav a.sub{padding:6px 18px 6px 34px;font-size:13px}nav a.sub:before{content:"└ ";color:#4a4d5c}
-.bar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}.bar2 .chips{margin:0}.bar2 .sp{flex:1}.bar2 input{width:min(220px,100%)}
-.syn{white-space:pre-line;max-width:780px}.syn.cut{max-height:9.5em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 60%,transparent)}
-.dt{display:grid;grid-template-columns:130px minmax(0,1fr);gap:6px 14px;max-width:780px;margin:14px 0}.dt dt{color:var(--mu)}.dt dd{margin:0;overflow-wrap:anywhere}
-.rr .tags{margin-top:4px;display:flex;flex-wrap:wrap;gap:2px 0;align-items:center}.rr .tags .lk{padding:0 8px;font-size:13px}.pill.pk{border-color:var(--te);color:var(--te)}.pill.wr{border-color:#d9a54a;color:#e8bd6a}.rr.pick{background:#2dd4bf0d}.peek{font-size:13px;margin-top:4px}.peek table td{padding:3px 8px}.pb{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:2px 0 4px}.pb i{display:block;height:100%;background:var(--bl);border-radius:4px;transition:width .5s}
-.dlbox{background:var(--g2);border-radius:4px;padding:8px 12px;margin:-4px 0 12px}.bad{color:#f08aa0;display:block;margin-top:2px}.po .ck{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:2px solid #fff;background:#0009;z-index:3;display:none;place-items:center;font-style:normal}
-.selmode .po .ck{display:grid}.pc.sel .ck{background:var(--pu);border-color:var(--pu)}.pc.sel .ck:after{content:"✓";color:#fff;font-size:15px;font-weight:700}.pc.sel .po{outline:3px solid var(--pu);outline-offset:-1px}
+/* ===== Theme: Readarr dark (colors and sizes taken from Readarr's own dark theme) ===== */
+:root{color-scheme:dark;
+ --red:#ca302d;--red2:#a41726;--red3:#66001a;--ink:#202020;--hdr:#2a2a2a;--side:#2a2a2a;--sideA:#333;--tool:#262626;--menu:#333;--menuH:#414141;
+ --card:#333;--card2:#2a2a2a;--tx:#ccc;--mu:#909293;--dim:#555;--white:#fff;--line:rgba(133,133,133,.35);--lbl:#595959;
+ --ok:#27c24c;--pri:#5d9cec;--warn:#ffa500;--dang:#f05050;--torrent:#00853d;--usenet:#17b1d9;
+ --btn:#333;--btnB:#393f45;--btnH:#444;--green:#0b8750;--greenB:#1d563d;--inp:#333;--inpB:#4b4b4b;--focus:#66afe9;
+ /* names used throughout Bookarr's code */
+ --te:var(--ok);--pu:var(--red);--bl:var(--pri);--g1:var(--card2);--g2:var(--card);--black:var(--side)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--ink);color:var(--tx);font:14px/1.528571429 Roboto,"open sans","Helvetica Neue",Helvetica,Arial,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+a{color:var(--white);text-decoration:none}a:hover{color:var(--red)}
+svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px;flex:none}
+/* page header */
+.pghd{flex:0 0 60px;height:60px;display:flex;align-items:center;background:var(--hdr);color:var(--white);z-index:30;position:relative}
+.pghd .logo{flex:0 0 210px;display:flex;align-items:center;padding-left:20px;gap:10px}.pghd .logo img{width:32px;height:32px;display:block}
+.sbt{display:none;background:none;border:0;color:var(--white);width:45px;height:60px;cursor:pointer;padding:0}.sbt svg.i{width:20px;height:20px}
+.hs{position:relative;display:flex;align-items:center;flex:0 1 420px;margin-left:12px}
+.hs input{margin-left:8px;width:200px;border:0;border-bottom:1px solid var(--white);border-radius:0;background:transparent;color:var(--white);padding:6px 0;font:inherit;outline:none;transition:border .3s,width .3s}
+.hs input:focus{border-bottom-color:transparent;width:320px}.hs input::placeholder{color:#bbb}
+.sugg{position:absolute;top:44px;left:0;width:420px;max-width:92vw;background:var(--menu);border-radius:4px;box-shadow:0 6px 24px #000a;overflow:hidden;z-index:40}
+.sugg .sh{padding:6px 12px;font-size:12px;color:var(--mu);background:#2a2a2a;text-transform:uppercase;letter-spacing:.03em}
+.sugg a{display:flex;gap:10px;align-items:center;padding:6px 12px;color:var(--tx)}.sugg a.on,.sugg a:hover{background:var(--menuH);color:var(--white)}
+.sugg img{width:30px;height:45px;object-fit:cover;background:#444;flex:none}.sugg small{display:block;color:var(--mu)}
+.hr{margin-left:auto;display:flex;padding-right:15px}.hr a{width:40px;text-align:center;line-height:60px;color:var(--white)}.hr a:hover{color:var(--red)}.hr svg.i{width:18px;height:18px}
+.hr a.warn{color:var(--warn)}
+/* sidebar + content */
+.wrap{display:flex;flex:1 1 auto;min-height:0}
+#nav{flex:0 0 210px;width:210px;background:var(--side);color:#e1e2e3;overflow-y:auto;overflow-x:hidden;padding-bottom:20px}
+#nav .it{border-left:3px solid transparent;transition:border-left .3s ease-in-out}#nav .it.act{border-left-color:var(--red2)}
+#nav a{display:block;padding:12px 24px;color:#e1e2e3;cursor:pointer;white-space:nowrap}#nav a:hover,#nav a:focus{color:var(--red);outline:none}
+#nav .it.act>a.pa{background:var(--sideA)}#nav a.ch{padding:10px 24px 10px 49px}#nav a.on{color:var(--red2)}
+#nav .ic{display:inline-block;width:18px;margin-right:7px;text-align:center}
+#nav .ver{padding:20px 24px 0;font-size:11px;color:var(--dim)}
+.content{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+/* toolbar */
+#tb{flex:0 0 60px;height:60px;display:flex;justify-content:space-between;padding:0 20px;background:var(--tool);color:#e1e2e3;z-index:5;position:relative}
+#tb:empty{display:none}.tbs{display:flex;align-items:stretch}
+.tbtn{width:60px;padding:4px 0 0;background:none;border:0;border-radius:0;color:#e1e2e3;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font:inherit;position:relative;min-height:0}
+.tbtn svg.i{width:21px;height:21px;stroke-width:1.8}.tbtn .lb{height:24px;display:flex;align-items:center;justify-content:center;padding:0 3px;font-size:11px;line-height:12px;text-align:center}
+.tbtn:hover,.tbtn.on{color:var(--red)}.tbtn:disabled{color:#999;cursor:default}.tbtn.wide{width:auto;padding:4px 6px 0}
+.tbsep{margin:10px 20px;height:40px;border-right:1px solid #e5e5e5;opacity:.35}
+.tbin{align-self:center;margin:0 10px;height:32px;width:170px;background:var(--inp);border:1px solid var(--inpB);border-radius:4px;color:var(--white);padding:0 10px;font:inherit}
+.tmenu{position:absolute;top:56px;right:0;min-width:200px;background:var(--menu);border-radius:4px;box-shadow:0 6px 24px #000b;z-index:50;padding:4px 0;line-height:normal}
+.tmenu a{display:flex;justify-content:space-between;gap:16px;padding:8px 16px;color:#e1e2e3;white-space:nowrap}.tmenu a:hover{background:#606060;color:var(--red)}.tmenu a.on{color:var(--red)}
+.tmenu a.on:before{content:"✓";margin-right:-6px}
+main#m{flex:1;overflow-y:auto;overflow-x:hidden;padding:20px;min-width:0;min-height:0;-webkit-overflow-scrolling:touch}
+/* forms + buttons (Readarr dark) */
+input,select,textarea,button{font:inherit}
+input,select,textarea{background:var(--inp);color:var(--tx);border:1px solid var(--inpB);border-radius:4px;padding:6px 12px;min-height:35px}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--focus);box-shadow:inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(102,175,233,.6)}
+input[readonly]{background:#222}input[type=checkbox],input[type=radio]{min-height:0;accent-color:var(--red)}
+button{background:var(--btn);border:1px solid var(--btnB);color:#eee;border-radius:4px;padding:6px 16px;cursor:pointer;min-height:35px}
+button:hover{background:var(--btnH);border-color:#5a6265}button:disabled{opacity:.65;cursor:default}
+button.p{background:var(--green);border-color:var(--greenB);color:#fff}button.p:hover{background:#097948}
+button.pu{background:var(--red);border-color:var(--red2);color:#fff}button.pu:hover{background:var(--red2)}
+button.dg{background:var(--dang);border-color:#f04b4b;color:#fff}button.dg:hover{background:#ee3d3d}
+button.lk{background:none;border:0;color:var(--white);padding:6px 4px;text-decoration:underline;min-height:0}button.lk:hover{color:var(--red)}
+label.ck{color:var(--tx);display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.f{display:grid;grid-template-columns:250px minmax(0,1fr);gap:12px 20px;max-width:900px;margin-bottom:20px;align-items:center}
+.f>span{text-align:right;font-weight:700;color:var(--tx)}
+/* text bits */
+h2{font-size:24px;font-weight:300;margin:0 0 8px;color:var(--white)}
+h3{margin:30px 0 15px;padding-bottom:6px;font-size:21px;font-weight:300;color:var(--tx);border-bottom:1px solid var(--line)}
+.mu{color:var(--mu)}.empty{color:var(--mu);padding:48px 0;text-align:center}.msg{color:var(--ok);margin-left:10px}
+.note{background:rgba(0,0,255,.1);border:1px solid #31708f;border-radius:4px;padding:12px 15px;margin:0 0 20px;color:var(--tx);max-width:1100px}
+.help{color:var(--mu);font-size:13px;margin:8px 0;max-width:900px}.help b{color:var(--tx)}
+.bad{color:var(--dang);display:block;margin-top:2px}
+.pill{display:inline-block;border:1px solid var(--lbl);background:var(--lbl);color:#fff;border-radius:2px;padding:3px 6px;margin:2px 4px 2px 0;font-size:12px;line-height:1.1}
+.pill.mu{background:transparent;color:var(--mu);border-color:var(--lbl)}.pill.pk{background:var(--ok);border-color:var(--ok)}.pill.wr{background:var(--warn);border-color:var(--warn);color:#222}
+.pill.red{background:var(--red);border-color:var(--red)}.pill.ok{background:var(--ok);border-color:var(--ok)}.pill.pri{background:var(--pri);border-color:var(--pri)}.pill.dg{background:var(--dang);border-color:var(--dang)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.chips button{padding:4px 12px;min-height:30px}.chips button.on{background:var(--red);border-color:var(--red);color:#fff}
+.bar2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}.bar2 .sp{flex:1}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+/* tables */
+table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px;font-weight:700;color:var(--tx);white-space:nowrap}
+td{padding:8px;border-top:1px solid var(--line);vertical-align:middle}tr:hover td{background:rgba(255,255,255,.08)}th.sort{cursor:pointer}th.sort:hover{color:var(--white)}
+.tw{overflow-x:auto;max-width:100%}.fi{overflow-wrap:anywhere}.fi small{display:block;color:var(--mu)}
+.x1{padding:2px 8px;min-height:0;background:none;border:0;color:var(--mu)}.x1:hover{color:var(--dang);background:none}
+/* posters (Readarr author index style) */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(162px,1fr));gap:20px 14px}
+.pc{cursor:pointer;min-width:0;background:var(--card2);box-shadow:0 0 6px #111;transition:all .2s ease-in}.pc:hover,.pc:focus-visible{box-shadow:0 0 12px #000;outline:none;z-index:2}
+.po{position:relative;aspect-ratio:2/3;background:#3a3a3a;overflow:hidden}
+.po img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}.po .tag,.po .bar,.po .ck{z-index:2}
+.po .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:10px;color:#f5f7fa;text-align:center;font-size:17px;line-height:1.3;overflow:hidden}
+.po .tag{position:absolute;top:6px;left:6px;background:var(--lbl);color:#fff;font-size:11px;padding:1px 6px;border-radius:2px;text-transform:capitalize}
+.po .bar{position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--dim)}
+.have .bar{background:var(--ok)}.want .bar{background:var(--pri)}.miss .bar{background:var(--dang)}.off .bar{background:var(--warn)}
+.pi{padding:4px 6px 6px;text-align:center;font-size:12px}.pi b{display:block;color:var(--white);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+.pi small{display:block;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pi .bd{display:block;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.have .bd{color:var(--ok)}.want .bd{color:var(--pri)}.miss .bd{color:var(--dang)}.off .bd{color:var(--warn)}
+.po .ck{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:2px solid #fff;background:#0009;display:none;place-items:center;font-style:normal}
+.selmode .po .ck{display:grid}.pc.sel .ck{background:var(--red);border-color:var(--red)}.pc.sel .ck:after{content:"✓";color:#fff;font-size:15px;font-weight:700}.pc.sel{outline:3px solid var(--red)}
 .selmode .pc{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}.pc{-webkit-touch-callout:none}
-.selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:15;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--g1);border:1px solid var(--pu);border-radius:8px;padding:10px 12px;box-shadow:0 8px 30px #000a;width:min(760px,calc(100vw - 24px))}
+.lfoot{display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between;margin:24px -20px -20px;padding:20px;background:rgba(0,0,0,.25);font-size:13px}
+.lfoot .lg{display:flex;flex-wrap:wrap;gap:6px 18px}.lfoot .sq{display:inline-block;width:14px;height:14px;margin-right:6px;vertical-align:-2px;border-radius:1px}
+/* detail pages (Readarr book/author details header) */
+.ihead{position:relative;margin:-20px -20px 20px;min-height:400px;overflow:hidden;color:var(--white)}
+.ihead .ibg{position:absolute;inset:-20px;background-size:cover;background-position:center;filter:blur(18px);opacity:.55;transform:scale(1.05)}
+.ihead .iov{position:absolute;inset:0;background:#000;opacity:.7}
+.ihc{position:relative;display:flex;gap:35px;padding:30px}
+.ipo{flex:0 0 250px;width:250px;align-self:flex-start;box-shadow:0 0 20px #000}
+.iinfo{flex:1;min-width:0}.ititle{display:flex;align-items:center;gap:10px}
+.ititle h1{margin:0;font-size:42px;line-height:1.15;font-weight:300;color:var(--white)}
+.monbtn{background:none;border:0;padding:0;min-height:0;color:var(--white);cursor:pointer}.monbtn svg.i{width:30px;height:30px}.monbtn.on svg.i{fill:currentColor}.monbtn:hover{background:none;color:var(--red)}
+.isub{font-size:18px;color:#ddd;margin:4px 0 10px;font-weight:300}
+.ilabels{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}.ilabels .pill{font-size:14px;padding:5px 9px}.ilabels a.pill:hover{background:var(--red);border-color:var(--red);color:#fff}
+.syn{white-space:pre-line;max-width:1000px}.syn.cut{max-height:9.5em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 60%,transparent)}
+.ihead .syn{color:#ddd}
+.dt{display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px 20px;max-width:1000px;margin:0}.dt dt{color:var(--mu);font-weight:700;text-align:right}.dt dd{margin:0;overflow-wrap:anywhere}
+.sb{margin:6px 0;padding:8px 12px;border-radius:4px;background:rgba(255,255,255,.08);border-left:4px solid var(--dang)}.sb.have{border-left-color:var(--ok)}.sb.want{border-left-color:var(--pri)}
+.dlbox{background:rgba(0,0,0,.35);border-radius:4px;padding:8px 12px;margin:0 0 12px}
+.pb{height:8px;background:#727070;border-radius:4px;overflow:hidden;margin:2px 0 4px}.pb i{display:block;height:100%;background:var(--pri);transition:width .5s}
+.cv{display:flex;gap:6px;align-items:center;margin-top:4px}.cv select,.cv button{padding:2px 8px;min-height:30px}
+.mode label{display:block;margin:4px 0;cursor:pointer}.mode input{margin-right:6px}
+.iacts{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:10px}
+/* releases list */
+.rr{display:grid;grid-template-columns:minmax(0,1fr) 72px 110px 74px 64px 48px 100px;gap:10px;padding:9px 8px;border-top:1px solid var(--line);align-items:center}
+.rr:hover{background:rgba(255,255,255,.08)}.rr.rh{border-top:0;font-weight:700}.rr.rh span{cursor:pointer;user-select:none}.rr.rh span:hover{color:var(--white)}
+.rr .t{overflow-wrap:anywhere;color:var(--white)}.rr .c{color:var(--tx)}.rr.pick{background:rgba(39,194,76,.08)}.rsort{display:none}
+.rr .tags{margin-top:4px;display:flex;flex-wrap:wrap;align-items:center}.rr .tags .lk{padding:0 8px;font-size:13px}.peek{font-size:13px;margin-top:4px}.peek td{padding:3px 8px}
+.rr2{display:flex;gap:12px;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.c-torrent{color:var(--torrent)!important}.c-usenet{color:var(--usenet)!important}
+/* modal (Readarr modal) */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:16px;z-index:60}
+.md{position:relative;background:#2a2a2a;border-radius:6px;width:min(1000px,100%);max-height:92vh;overflow:auto;padding:30px;box-shadow:0 5px 20px #000}
+.md .x{position:absolute;top:12px;right:12px;background:none;border:0;color:var(--mu);font-size:0;min-height:0;padding:6px}.md .x:before{content:"✕";font-size:18px}.md .x:hover{color:var(--white)}
+.mh{display:grid;grid-template-columns:190px 1fr;gap:26px}.mh .po{box-shadow:0 0 12px #000}
+.dgl{max-width:520px}
+/* toast + selection bar */
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:min(560px,92vw);background:#333;border-left:4px solid var(--ok);border-radius:4px;padding:11px 16px;z-index:70;opacity:0;pointer-events:none;transition:opacity .2s;box-shadow:0 4px 16px #000a;color:#eee}
+.toast.show{opacity:1}.toast.bad{border-left-color:var(--dang)}
+.selbar{position:fixed;left:calc(50% + 105px);transform:translateX(-50%);bottom:16px;z-index:45;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#2a2a2a;border:1px solid var(--red);border-radius:6px;padding:10px 12px;box-shadow:0 8px 30px #000a;width:min(760px,calc(100vw - 260px))}
 .selbar .sp{flex:1}.selmode main{padding-bottom:110px}.selmode .toast{bottom:120px}
-@media(max-width:760px){.selbar{left:0;right:0;transform:none;bottom:0;width:100%;border-radius:0;border-width:1px 0 0;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}.selbar button{flex:1 1 auto}.selbar .sp{display:none}.selbar b{flex:1 1 100%}.selmode .toast{bottom:150px}.selmode main{padding-bottom:170px}}
-.pill{display:inline-block;border:1px solid var(--line);border-radius:12px;padding:1px 9px;margin:0 4px 4px 0;font-size:12px;color:#c9ccd8}
-.help{color:var(--mu);font-size:13px;margin:8px 0 0;max-width:640px}.help b{color:var(--tx)}
-button.lk{background:none;border:0;color:var(--bl);padding:7px 4px;text-decoration:underline}
-.cv{display:flex;gap:6px;align-items:center;margin-top:4px}.cv select{padding:4px 6px}.cv button{padding:4px 10px}
-td.sort,th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--tx)}.x1{padding:2px 8px;color:var(--mu)}
-.mode label{display:block;margin:4px 0;cursor:pointer}.mode input{accent-color:var(--pu);margin-right:6px}
-@media(max-width:760px){.mob{display:inline}nav a.sub{padding:12px 14px;font-size:14px}nav a.sub:before{content:""}.dt{grid-template-columns:100px minmax(0,1fr)}}
+.addbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}.addbar .ai{display:flex;align-items:center;flex:1 1 400px;background:var(--inp);border:1px solid var(--inpB);border-radius:4px;padding-left:12px}
+.addbar .ai input{flex:1;border:0;background:transparent;font-size:16px;min-height:42px}.addbar .ai input:focus{box-shadow:none}
+.cal h3{font-size:18px}.cal h3.today{color:var(--red)}.cal td a{color:var(--white)}
+#sbo{display:none}
+/* phones (Readarr breakpoint 768px): sidebar slides in, whole page scrolls */
+@media(max-width:768px){
+ body{display:block;height:auto;overflow:visible}html{height:auto}
+ .pghd{position:sticky;top:0}.pghd .logo{flex:0 0 auto;padding-left:0;gap:4px}.sbt{display:block}.hs{flex:1;margin-left:6px}.hs input,.hs input:focus{width:100%}.hr{padding-right:6px}.hr a{width:34px}
+ .wrap{display:block}.content{display:block}
+ #nav{position:fixed;top:60px;left:0;bottom:0;z-index:25;transform:translateX(-100%);transition:transform .3s ease-in-out}
+ body.sbopen #nav{transform:none;box-shadow:0 0 30px #000}body.sbopen #sbo{display:block;position:fixed;inset:60px 0 0;background:rgba(0,0,0,.5);z-index:24}
+ #tb{position:sticky;top:60px;padding:0 10px;overflow-x:auto;scrollbar-width:none;z-index:20}#tb::-webkit-scrollbar{display:none}.tbs{flex:none}.tbsep{margin:10px 5px}.tbin{width:120px}
+ .tmenu{position:fixed;top:120px;right:8px}
+ main#m{overflow:visible;padding:10px}
+ .grid{grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:12px 8px}.po .ph{font-size:13px}
+ .f{grid-template-columns:1fr}.f>span{text-align:left}input,select{font-size:16px}
+ .ihead{margin:-10px -10px 16px;min-height:0}.ihc{gap:14px;padding:14px}.ipo{flex:0 0 110px;width:110px}.ititle h1{font-size:24px}.isub{font-size:15px}.ilabels .pill{font-size:12px;padding:3px 6px}
+ .dt{grid-template-columns:100px minmax(0,1fr)}.dt dt{text-align:left}
+ .lfoot{margin:20px -10px -10px;padding:14px}
+ .ov{padding:0;align-items:stretch}.md{width:100%;max-height:100dvh;height:100dvh;border-radius:0;padding:16px}.mh{grid-template-columns:100px 1fr;gap:14px}
+ .rr.rh{display:none}.rsort{display:block;margin:0 0 8px;width:100%}.rr{display:flex;flex-wrap:wrap;gap:2px 12px;padding:12px 4px}.rr .t{flex:1 1 100%}.rr .c{font-size:12px}.rr .b{margin-left:auto}
+ main table.cards{display:block;overflow:visible}.cards tbody{display:block}.cards tr:first-child{display:none}
+ .cards tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;padding:12px 2px;border-top:1px solid var(--line)}.cards td{border:0;padding:0;min-width:0}
+ .cards td.fi{flex:1 1 100%;font-weight:500}.cards td:has(.pb){flex:1 1 100%}.cards .fold{display:none}.cards td:last-child{margin-left:auto}.cards .cv{flex-wrap:wrap}
+ .selbar{left:0;right:0;transform:none;bottom:0;width:100%;border-radius:0;border-width:1px 0 0;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}.selbar button{flex:1 1 auto}.selbar .sp{display:none}.selbar b{flex:1 1 100%}
+ .selmode .toast{bottom:150px}.selmode main{padding-bottom:170px}
+}
 </style></head><body>
-<nav id="nav"></nav>
-<div class="col"><header id="hd"></header><main id="m"></main></div>
+<header class="pghd"><div class="logo"><button class="sbt" id="sbt" aria-label="Menu"></button><a href="#/main" title="Bookarr"><img src="/bookarr.svg" alt="Bookarr"></a></div>
+<div class="hs" id="hs"></div><div class="hr" id="hr"></div></header>
+<div class="wrap"><nav id="nav"></nav><div id="sbo"></div><div class="content"><div id="tb"></div><main id="m"></main></div></div>
 <script>
 const KEY=BOOKARR.apiKey,H={'X-Api-Key':KEY,'Content-Type':'application/json'};
-const api=(p,o={})=>fetch('/api/v1/'+p,{headers:H,...o}).then(async r=>{if(!r.ok){const d=(await r.json().catch(()=>({}))).detail;throw new Error((typeof d=='string'?d:d?JSON.stringify(d):'')||('Bookarr could not finish that (error '+r.status+(r.statusText?' '+r.statusText:'')+'). Check Settings > Logs for details.'))}return r.json()},e=>{throw new Error(e.message&&!/fetch/i.test(e.message)?e.message:'Could not reach Bookarr. Is the container running?')});
+const api=(p,o={})=>fetch('/api/v1/'+p,{headers:H,...o}).then(async r=>{if(!r.ok){const d=(await r.json().catch(()=>({}))).detail;throw new Error((typeof d=='string'?d:d?JSON.stringify(d):'')||('Bookarr could not finish that (error '+r.status+(r.statusText?' '+r.statusText:'')+'). Check System > Logs for details.'))}return r.json()},e=>{throw new Error(e.message&&!/fetch/i.test(e.message)?e.message:'Could not reach Bookarr. Is the container running?')});
 const send=(p,m,b)=>api(p,{method:m,body:b?JSON.stringify(b):undefined});
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const store={get:(k,d)=>{try{return localStorage.getItem('bookarr.'+k)??d}catch(e){return d}},set:(k,v)=>{try{localStorage.setItem('bookarr.'+k,v)}catch(e){}}};
-// side menu: sub-entries hold the series/authors you follow for each type
-const NAV=[['main','Library'],['comic','Comics'],['comic-follow','<span class="mob">Comic </span>Series',1],['ebook','Ebooks'],['ebook-follow','<span class="mob">Ebook </span>Authors',1],['audiobook','Audiobooks'],['audiobook-follow','<span class="mob">Audio </span>Authors &amp; series',1],['calendar','Calendar'],'-',['wanted','Wanted'],['activity','Activity'],'-',['system','System'],['settings','Settings']];
-const TITLE={main:'Library',comic:'Comics','comic-follow':'Comic series',ebook:'Ebooks','ebook-follow':'Ebook authors',audiobook:'Audiobooks','audiobook-follow':'Audiobook authors & series',calendar:'Calendar',wanted:'Wanted',activity:'Activity',system:'System',settings:'Settings'};
-const TN={comic:'Comics',ebook:'Ebooks',audiobook:'Audiobooks'},T1={comic:'comic',ebook:'ebook',audiobook:'audiobook'};
+// ---------- icons (simple line icons drawn for Bookarr) ----------
+const IP={books:'<path d="M4 4h4v16H4zM10 4h4v16h-4z"/><path d="m16 5 3.6-.9 3.4 15.6-3.6.9z"/>',users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-3.5 3.2-5.5 6.5-5.5s6 2 6.5 5.5M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.8.7 2.8 2.5 3 5.2"/>',
+ calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',warning:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+ laptop:'<rect x="4" y="5" width="16" height="11" rx="1"/><path d="M2 19h20"/>',search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',refresh:'<path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/>',
+ check:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="m8 12 3 3 5-6"/>',sort:'<path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/>',filter:'<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
+ trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',userplus:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-3.5 3.2-5.5 6.5-5.5s6 2 6.5 5.5M19 8v6M16 11h6"/>',
+ user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',download:'<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>',send:'<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>',
+ tag:'<path d="M3 3h8l10 10-8 8L3 11z"/><circle cx="7.5" cy="7.5" r="1.5"/>',save:'<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/>',bookmark:'<path d="M6 3h12v18l-6-4-6 4z"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',x:'<path d="M6 6l12 12M18 6 6 18"/>',menu:'<path d="M3 6h18M3 12h18M3 18h18"/>',play:'<path d="M7 4l12 8-12 8z"/>',
+ series:'<path d="M5 3h10v18H5z"/><path d="M15 6h4v15H9"/>',heart:'<path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/>',
+ list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',ban:'<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',copy:'<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V4H3v13h5"/>'};
+const I=n=>`<svg class="i" viewBox="0 0 24 24">${IP[n]||''}</svg>`;
 function toast(t,bad){let e=$('#toast');if(!e){e=document.createElement('div');e.id='toast';document.body.appendChild(e)}e.textContent=t;e.className='toast show'+(bad?' bad':'');clearTimeout(toast.t);toast.t=setTimeout(()=>e.className='toast',7000)}
 let flt='all',RSORT={k:'score',d:-1},RFILT='all',STRICT=1,HFILT='all';
-let view='main',term='',sub='clients',types={comic:1,ebook:1,audiobook:1},REG=[];
-const LOGO='<img src="/bookarr.svg" width="28" height="28" alt="">';
+let view='main',term='',sub='clients',sysPart='status',types={comic:1,ebook:1,audiobook:1},REG=[];
+const TN={comic:'Comics',ebook:'Ebooks',audiobook:'Audiobooks'},T1={comic:'comic',ebook:'ebook',audiobook:'audiobook'};
 const baseType=v=>v.split('-')[0];
-function nav(h){if(location.hash==h)route();else location.hash=h}
+const TITLE={main:'Library',comic:'Comics',ebook:'Ebooks',audiobook:'Audiobooks',add:'Add New','comic-follow':'Comic Series','ebook-follow':'Ebook Authors','audiobook-follow':'Audiobook Authors',
+ calendar:'Calendar',activity:'Queue',history:'History',blocklist:'Blocklist',wanted:'Missing',settings:'Settings',system:'System'};
+// Readarr's settings order, with Bookarr's extra sections slotted in where they belong
+const SUBS=[['media','Media Management'],['library','Root Folders'],['quality','Quality'],['indexer','Indexers'],['clients','Download Clients'],['notifications','Connect'],['metadata','Metadata'],
+ ['converter','Converter'],['email','Kindle'],['devices','Reader Devices'],['seerrng','SeerrNG'],['security','Security'],['general','General']];
+const SYS=[['status','Status'],['tasks','Tasks'],['backup','Backup'],['duplicates','Duplicates'],['logs','Log Files']];
+const NAVT=[{k:'main',l:'Library',i:'books',c:[['main','Books'],['comic','Comics'],['ebook','Ebooks'],['audiobook','Audiobooks'],['add','Add New']]},
+ {k:'ebook-follow',l:'Authors & Series',i:'users',c:[['ebook-follow','Ebook Authors'],['audiobook-follow','Audiobook Authors'],['comic-follow','Comic Series']]},
+ {k:'calendar',l:'Calendar',i:'calendar'},
+ {k:'activity',l:'Activity',i:'clock',c:[['activity','Queue'],['history','History'],['blocklist','Blocklist']]},
+ {k:'wanted',l:'Wanted',i:'warning',c:[['wanted','Missing']]},
+ {k:'settings/'+SUBS[0][0],l:'Settings',i:'gear',c:SUBS.map(([k,l])=>['settings/'+k,l])},
+ {k:'system/status',l:'System',i:'laptop',c:SYS.map(([k,l])=>['system/'+k,l])}];
+function nav(h){closeSidebar();if(location.hash==h)route();else location.hash=h}
 function toTop(){try{window.scrollTo(0,0)}catch(e){}const m=$('#m');if(m)m.scrollTop=0}
-function centerNav(){const n=$('#nav'),a=n&&n.querySelector('a.on');if(a&&n.scrollWidth>n.clientWidth)n.scrollLeft=a.offsetLeft-n.clientWidth/2+a.clientWidth/2}
 const hsh=t=>{let h=0;for(const c of String(t||''))h=(h*31+c.charCodeAt(0))|0;return (h>>>0).toString(36)};
 const coverUrl=i=>'/api/v1/cover/'+i.id+'?apikey='+KEY+'&v='+hsh((i.cover||'')+'|'+(i.path||''));
 const KN={sabnzbd:'SABnzbd',qbittorrent:'qBittorrent'};
 const pbar=p=>`<div class="pb"><i style="width:${Math.max(2,Math.min(100,p||0))}%"></i></div>`;
 let LPOLL=0;
-function chrome(){setTimeout(centerNav,0);$('#nav').innerHTML=`<div class="logo">${LOGO}Bookarr</div>`+NAV.map(n=>n=='-'?'<hr>':`<a tabindex=0 class="${view==n[0]?'on':''} ${n[2]?'sub':''}" data-k="${n[0]}">${n[1]}</a>`).join('');
- document.querySelectorAll('nav a').forEach(a=>{a.onclick=()=>nav('#/'+a.dataset.k);a.onkeydown=e=>{if(e.key=='Enter')a.click()}});
- $('#hd').innerHTML=`<h1>${TITLE[view]||'Bookarr'}</h1><span class="sp"></span><input type="search" id="q" placeholder="Find a book, comic or audiobook to add" value="${esc(term)}">
- ${Object.keys(types).map(t=>`<label class="ck"><input type="checkbox" data-t="${t}" ${types[t]?'checked':''}>${TN[t]}</label>`).join('')}<button class="p" id="go">Search</button>`;
- const run=()=>{const t=$('#q').value.trim();nav('#/'+(view.startsWith('settings')||['system','activity','calendar'].includes(view)?'main':view)+(t?'?q='+encodeURIComponent(t):''))};$('#go').onclick=run;$('#q').onkeydown=e=>{if(e.key=='Enter')run()};
- document.querySelectorAll('[data-t]').forEach(c=>c.onchange=()=>types[c.dataset.t]=c.checked?1:0)}
+// ---------- page frame: sidebar, header search, toolbar ----------
+const curKey=()=>view=='settings'?'settings/'+sub:view=='system'?'system/'+sysPart:view;
+function chrome(){const k=curKey();
+ $('#nav').innerHTML=NAVT.map(p=>{const act=p.k==k||(p.c||[]).some(c=>c[0]==k);
+  return `<div class="it ${act?'act':''}"><a class="pa ${p.k==k&&!p.c?'on':''}" data-h="#/${p.k}"><span class="ic">${I(p.i)}</span>${p.l}</a>${act&&p.c?p.c.map(c=>`<a class="ch ${c[0]==k?'on':''}" data-h="#/${c[0]}">${c[1]}</a>`).join(''):''}</div>`}).join('')+'<div class="ver">Bookarr</div>';
+ $('#nav').querySelectorAll('a[data-h]').forEach(a=>{a.tabIndex=0;a.onclick=()=>nav(a.dataset.h);a.onkeydown=e=>{if(e.key=='Enter')a.click()}});
+ document.title=(TITLE[view]&&view!='settings'&&view!='system'?TITLE[view]:view=='settings'?(SUBS.find(s=>s[0]==sub)||[,'Settings'])[1]:view=='system'?(SYS.find(s=>s[0]==sysPart)||[,'System'])[1]:'Bookarr')+' - Bookarr';
+ tb()}
+function closeSidebar(){document.body.classList.remove('sbopen')}
+// toolbar: tb(leftItems, rightItems). Item = {id,icon,label,on,menu:[[key,label]],sel,pick,cls,html} or 'sep'
+function tb(left=[],right=[]){const el=$('#tb');
+ const one=(x,n)=>x=='sep'?'<span class="tbsep"></span>':x.html?x.html:`<button class="tbtn ${x.cls||''}" ${x.id?`id="${x.id}"`:''} data-tn="${n}" title="${esc(x.title||x.label)}" ${x.disabled?'disabled':''}>${I(x.icon)}<span class="lb">${esc(x.label)}</span></button>`;
+ const all=[...left,...right];
+ el.innerHTML=(all.length?`<div class="tbs">${left.map((x,n)=>one(x,n)).join('')}</div><div class="tbs">${right.map((x,n)=>one(x,left.length+n)).join('')}</div>`:'');
+ el.querySelectorAll('[data-tn]').forEach(b=>{const x=all[+b.dataset.tn];
+  if(x.menu)b.onclick=e=>{e.stopPropagation();openMenu(b,x)};else if(x.on)b.onclick=x.on})}
+function openMenu(btn,x){document.querySelectorAll('.tmenu').forEach(m=>m.remove());const d=document.createElement('div');d.className='tmenu';
+ d.innerHTML=x.menu.map(([k,l])=>`<a data-k="${esc(k)}" class="${x.sel==k?'on':''}">${l}</a>`).join('');btn.appendChild(d);
+ d.querySelectorAll('[data-k]').forEach(a=>a.onclick=e=>{e.stopPropagation();d.remove();x.pick(a.dataset.k)})}
+document.addEventListener('click',()=>document.querySelectorAll('.tmenu').forEach(m=>m.remove()));
+// header: quick jump to anything in your library, or go to Add New
+let LIB=null;
+function initHeader(){$('#sbt').innerHTML=I('menu');$('#sbt').onclick=()=>document.body.classList.toggle('sbopen');$('#sbo').onclick=closeSidebar;
+ $('#hs').innerHTML=`${I('search')}<input id="q" type="search" placeholder="Search" autocomplete="off" aria-label="Search your library"><div class="sugg" id="sugg" hidden></div>`;
+ $('#hr').innerHTML=`<a href="#/add" title="Add New">${I('plus')}</a><a href="#/system/status" id="hlth" title="System status">${I('laptop')}</a>`;
+ const q=$('#q'),sg=$('#sugg');let pos=-1,hits=[];
+ const draw=()=>{const t=q.value.trim().toLowerCase();if(!t){sg.hidden=true;return}
+  hits=(LIB||[]).filter(i=>[i.title,i.author,i.series].join(' ').toLowerCase().includes(t)).slice(0,8);
+  sg.innerHTML=(hits.length?'<div class="sh">In your library</div>'+hits.map((i,n)=>`<a data-n="${n}" class="${pos==n?'on':''}"><img src="${coverUrl(i)}" alt="" onerror="this.style.visibility='hidden'"><span>${esc(i.title)}<small>${esc([TN[i.type]?.replace(/s$/,''),i.author||i.series].filter(Boolean).join(' · '))}</small></span></a>`).join(''):'')+
+   `<div class="sh">Add new</div><a data-n="add" class="${pos==hits.length?'on':''}">${I('plus')}<span>Search for "${esc(q.value.trim())}" to add</span></a>`;sg.hidden=false;
+  sg.querySelectorAll('[data-n]').forEach(a=>a.onmousedown=e=>{e.preventDefault();pick(a.dataset.n)})};
+ const pick=n=>{sg.hidden=true;const t=q.value.trim();q.value='';q.blur();if(n=='add'||n==null||!hits[n])nav('#/add?q='+encodeURIComponent(t));else nav('#/item/'+hits[n].id)};
+ q.onfocus=async()=>{if(!LIB)try{LIB=await api('item')}catch(e){LIB=[]}draw()};q.oninput=()=>{pos=-1;draw()};q.onblur=()=>setTimeout(()=>sg.hidden=true,150);
+ q.onkeydown=e=>{const max=hits.length;if(e.key=='ArrowDown'){pos=Math.min(pos+1,max);draw();e.preventDefault()}else if(e.key=='ArrowUp'){pos=Math.max(pos-1,-1);draw();e.preventDefault()}
+  else if(e.key=='Enter'&&q.value.trim()){pick(pos>=0&&pos<max?pos:'add')}else if(e.key=='Escape'){q.value='';sg.hidden=true;q.blur()}};
+ api('health').then(h=>{if(h.some(x=>!x.ok)){const a=$('#hlth');a.classList.add('warn');a.title='Some settings need attention (System > Status)'}}).catch(()=>{})}
 const st=i=>i.status=='downloaded'?'have':i.status=='wanted'?'want':i.monitored?'miss':'off';
 const BL={have:'Downloaded',want:'Downloading',miss:'Missing',off:'Not monitored'};
-function poster(i,src,lib){const k=REG.push(i)-1;let s=st(i),b=lib?(i._b||BL[s]):'';if(lib&&!i._s&&i.status=='downloaded'&&i.path&&i.file_size!=null)b='Downloaded, '+i.path.split('.').pop().toUpperCase();if(lib&&!i._s&&i.status=='downloaded'&&'file_size' in i&&i.file_size==null){s='miss';b='File missing'}
- return `<div class="pc ${lib?s:''} ${lib&&i.id&&!i._s&&SEL.has(i.id)?'sel':''}" tabindex=0 data-i="${k}"><div class="po">${lib&&!i._s?'<i class="ck"></i>':''}${src?`<img loading=lazy src="${esc(src)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc((i.title||'?').slice(0,2))}</span><span class="tag">${esc(i._tag||i.type)}</span>${b?`<span class="bd">${esc(b)}</span>`:''}<i class="bar"></i></div><b>${esc(i.title)}</b><small>${esc(i._sub||[i.author||i.series,i.year].filter(Boolean).join(', '))}</small></div>`}
-// ---------- library grid: filter chips, quick filter, sorting ----------
+function poster(i,src,lib){const k=REG.push(i)-1;let s=st(i),b=lib?(i._b||BL[s]):'';if(lib&&!i._s&&i.status=='downloaded'&&i.path&&i.file_size!=null)b='Downloaded · '+i.path.split('.').pop().toUpperCase();if(lib&&!i._s&&i.status=='downloaded'&&'file_size' in i&&i.file_size==null){s='miss';b='File missing'}
+ return `<div class="pc ${lib?s:''} ${lib&&i.id&&!i._s&&SEL.has(i.id)?'sel':''}" tabindex=0 data-i="${k}"><div class="po">${lib&&!i._s?'<i class="ck"></i>':''}${src?`<img loading=lazy src="${esc(src)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc(i.title||'?')}</span><span class="tag">${esc(i._tag||i.type)}</span><i class="bar"></i></div><div class="pi"><b>${esc(i.title)}</b><small>${esc(i._sub||[i.author||i.series,i.year].filter(Boolean).join(', ')||' ')}</small>${b?`<span class="bd">${esc(b)}</span>`:''}</div></div>`}
+// ---------- library grid: filter, quick filter, sorting (toolbar) ----------
 const FL={all:()=>1,have:i=>i.status=='downloaded',miss:i=>i.status=='missing'&&i.monitored,want:i=>i.status=='wanted',off:i=>!i.monitored&&i.status!='downloaded'};
+const FLL=[['all','All'],['have','Downloaded'],['want','Downloading'],['miss','Missing'],['off','Not monitored']];
 const SORTS=[['added','Recently added'],['title','Title A–Z'],['author','Author A–Z'],['series','Series order'],['year','Newest year first'],['release','Release date'],['size','Biggest files'],['status','Status']];
 const cmpS=(a,b)=>String(a||'￿').localeCompare(String(b||'￿'),undefined,{numeric:true,sensitivity:'base'});
 const bare=t=>String(t||'').replace(/^(the|a|an)\s+/i,'');
@@ -121,22 +264,28 @@ const SORTF={added:(a,b)=>cmpS(b.added,a.added),title:(a,b)=>cmpS(bare(a.title),
  series:(a,b)=>cmpS(a.series||a.title,b.series||b.title)||(parseFloat(a.num)||0)-(parseFloat(b.num)||0)||cmpS(a.title,b.title),year:(a,b)=>(b.year||0)-(a.year||0)||cmpS(a.title,b.title),
  release:(a,b)=>cmpS(b.release_date||'',a.release_date||''),size:(a,b)=>(b.file_size||0)-(a.file_size||0),status:(a,b)=>(STO[a.status]??3)-(STO[b.status]??3)||cmpS(a.title,b.title)};
 let SEL=new Set(),SELON=0;
-function drawLib(m,it){REG=[];document.body.classList.toggle('selmode',!!SELON);const sk=store.get('sort.'+view,view=='wanted'?'release':'added'),qf=(drawLib.q||'').toLowerCase();
- const c=k=>it.filter(FL[k]).length,L=[['all','All'],['have','Downloaded'],['want','Downloading'],['miss','Missing'],['off','Not monitored']];
+function drawLib(m,it){REG=[];LIB=view=='main'?it:LIB;document.body.classList.toggle('selmode',!!SELON);const sk=store.get('sort.'+view,view=='wanted'?'release':'added'),qf=(drawLib.q||'').toLowerCase();
+ const c=k=>it.filter(FL[k]).length;
  const v=it.filter(FL[flt]).filter(i=>!qf||[i.title,i.author,i.series,i.publisher].join(' ').toLowerCase().includes(qf)).sort(SORTF[sk]||SORTF.added);
- const sa=view=='comic'?it.filter(i=>i.type=='comic'&&!i.series_id).length:0;
- m.innerHTML=`<div class="bar2"><div class="chips">${L.map(([k,l])=>`<button class="${flt==k?'on':''}" data-f="${k}">${l} (${c(k)})</button>`).join('')}</div><span class="sp"></span>
- <button id="selbtn">${SELON?'Done selecting':'Select'}</button><input type="search" id="lf" placeholder="Filter this list" value="${esc(drawLib.q||'')}"><select id="ls" aria-label="Sort">${SORTS.map(([k,l])=>`<option value="${k}" ${sk==k?'selected':''}>Sort: ${l}</option>`).join('')}</select></div>`+
- (sa?`<div class="note">${sa} comic${sa>1?'s are':' is'} not part of a followed series. Open one and tap <b>Find series</b> to track the whole run.</div>`:'')+
- (v.length?`<div class="grid">${v.map(i=>poster(i,coverUrl(i),1)).join('')}</div>`:'<div class="empty">Nothing matches this filter.</div>');
- m.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{flt=b.dataset.f;drawLib(m,it)});
- $('#ls').onchange=e=>{store.set('sort.'+view,e.target.value);drawLib(m,it)};
+ const sa=view=='comic'?it.filter(i=>i.type=='comic'&&!i.series_id).length:0,size=it.reduce((a,i)=>a+(i.file_size||0),0);
+ tb([{id:'lscan',icon:'refresh',label:'Update Library',title:'Scan your library folders for new files',on:async e=>{e.currentTarget.disabled=true;toast('Scanning your folders…');try{const r=await send('library/scan','POST');toast('Added '+r.added+' new title'+(r.added==1?'':'s'));go()}catch(x){toast(x.message,1)}}},
+   ...(view=='wanted'?[{id:'wsearch',icon:'search',label:'Search All',on:()=>searchAll(v)}]:[]),'sep',
+   {id:'selbtn',icon:'check',label:SELON?'Done':'Select',cls:SELON?'on':''}],
+  [{html:`<input id="lf" class="tbin" type="search" placeholder="Filter titles" value="${esc(drawLib.q||'')}">`},
+   {icon:'sort',label:'Sort',menu:SORTS,sel:sk,pick:k=>{store.set('sort.'+view,k);drawLib(m,it)}},
+   {icon:'filter',label:'Filter',cls:flt!='all'?'on':'',menu:FLL.map(([k,l])=>[k,`<span>${l}</span><span class="mu">${c(k)}</span>`]),sel:flt,pick:k=>{flt=k;drawLib(m,it)}}]);
+ m.innerHTML=(sa?`<div class="note">${sa} comic${sa>1?'s are':' is'} not part of a followed series. Open one and choose <b>Find Series</b> to track the whole run.</div>`:'')+
+ (v.length?`<div class="grid">${v.map(i=>poster(i,coverUrl(i),1)).join('')}</div>`:'<div class="empty">Nothing matches this filter.</div>')+
+ `<div class="lfoot"><div class="lg">${[['ok','Downloaded'],['pri','Downloading'],['dang','Missing (monitored)'],['warn','Not monitored']].map(([c,l])=>`<span><i class="sq" style="background:var(--${c})"></i>${l}</span>`).join('')}</div><div class="mu">Titles ${it.length} · Downloaded ${c('have')} · Missing ${c('miss')} · On disk ${mb(size)}</div></div>`;
  drawLib.v=v;libProgress(m,it);$('#lf').oninput=e=>{drawLib.q=e.target.value;clearTimeout(drawLib.t);drawLib.t=setTimeout(()=>{const p=e.target.selectionStart;drawLib(m,it);const f=$('#lf');f.focus();f.setSelectionRange(p,p)},250)};bindPosters();bindSelect(m,it)}
+async function searchAll(v){const ids=v.filter(i=>i.status=='missing').map(i=>i.id);if(!ids.length)return toast('Nothing missing to search for');
+ if(await dlg(`Search your indexers for all <b>${ids.length}</b> missing title${ids.length==1?'':'s'} now?`,[['Search all','p']])<0)return;let sent=0;
+ for(const [n,id] of ids.entries()){toast(`Searching ${n+1} of ${ids.length}…`);try{await send('item/'+id+'/search','POST');sent++}catch(e){}}toast(`Done. Sent ${sent} download${sent==1?'':'s'}.`);go()}
 async function libProgress(m,it){clearTimeout(LPOLL);if(!it.some(i=>i.status=='wanted'))return;const v=view;let q;try{q=await api('queue')}catch(e){return}
  if(view!=v||!m.isConnected||term)return;const by={};q.forEach(x=>{if(x.item_id)by[x.item_id]=x});
  m.querySelectorAll('.pc').forEach(p=>{const i=REG[p.dataset.i],x=i&&by[i.id];if(!x)return;const b=p.querySelector('.bd'),bar=p.querySelector('.bar');
   if(b)b.textContent=x.problem?'Needs attention':(x.progress!=null&&x.progress<100?'Downloading '+Math.floor(x.progress)+'%':x.status.split(',')[0]);
-  if(bar&&x.progress!=null)bar.style.background=`linear-gradient(90deg,var(--bl) ${x.progress}%,var(--line) ${x.progress}%)`});
+  if(bar&&x.progress!=null)bar.style.background=`linear-gradient(90deg,var(--pri) ${x.progress}%,var(--dim) ${x.progress}%)`});
  if(q.length)LPOLL=setTimeout(()=>libProgress(m,it),8000)}
 // ---------- select several titles (Select button, right-click, or press-and-hold on a phone) ----------
 function bindSelect(m,it){const redraw=()=>drawLib(m,it),toggle=i=>{SEL.has(i.id)?SEL.delete(i.id):SEL.add(i.id)};
@@ -164,26 +313,43 @@ function selBar(m,it){let b=$('#selbar');if(!SELON){if(b)b.remove();document.bod
 function bindPosters(){document.querySelectorAll('.pc').forEach(p=>{p.onclick=()=>{const i=REG[p.dataset.i];i._s?location.hash='#/series/'+i.id:i.id?location.hash='#/item/'+i.id:modal(i)};p.onkeydown=e=>{if(e.key=='Enter')p.click()}})}
 async function go(){clearTimeout(LPOLL);clearTimeout(POLL);if(go.v!==view){SEL.clear();SELON=0;const b=$('#selbar');if(b)b.remove();document.body.classList.remove('selmode')}go.v=view;chrome();REG=[];const m=$('#m');m.innerHTML='<div class="empty">Loading…</div>';
  try{if(view=='settings')return await settings(m);
-  if(term){const tv=baseType(view),r=await api('lookup?term='+encodeURIComponent(term)+'&types='+Object.keys(types).filter(k=>types[k]&&(!T1[tv]||tv==k)).join(','));
-   m.innerHTML=`<div class="bar2"><span class="mu">Results for <b style="color:var(--tx)">${esc(term)}</b>. Tap a title to see its details and add it.</span><span class="sp"></span><button id="cls">✕ Close search</button></div>`+(r.some(x=>x.type=='comic'&&x.provider!='comicvine')?'<div class="note">Comic results are limited without a ComicVine key. Add one in Settings &gt; Metadata to get real series and issue lists.</div>':'')+(r.length?`<div class="grid">${r.map(i=>poster(i,i.cover)).join('')}</div>`:'<div class="empty">No matches. Try fewer keywords, or check the metadata keys in Settings.</div>');$('#cls').onclick=closeSearch;return bindPosters()}
+  if(view=='add'||term)return await addView(m);
   if(view.endsWith('-follow'))return await followView(m,baseType(view));
-  if(view=='calendar')return await calView(m);if(view=='system')return await systemView(m);if(view=='activity')return await activityView(m);
+  if(view=='calendar')return await calView(m);if(view=='system')return await systemView(m,sysPart);
+  if(view=='activity')return await activityView(m,'queue');if(view=='history')return await activityView(m,'history');if(view=='blocklist')return await blocklistView(m);
   const it=view=='wanted'?await api('wanted/missing'):await api('item'+(T1[view]?'?type='+view:''));
-  if(!it.length){m.innerHTML=`<div class="empty">${view=='wanted'?'Nothing missing. Everything you monitor is downloaded.':'Nothing here yet. Use the search box at the top to find a title and add it, or scan your folders in Settings &gt; Library.'}</div>`;return}
+  if(!it.length){tb([{id:'lscan',icon:'refresh',label:'Update Library',on:async()=>{const r=await send('library/scan','POST');toast('Added '+r.added+' new titles');go()}}],[{icon:'plus',label:'Add New',on:()=>nav('#/add')}]);
+   m.innerHTML=`<div class="empty">${view=='wanted'?'Nothing missing. Everything you monitor is downloaded.':'Nothing here yet.<br><br><button class="p" onclick="nav(\'#/add\')">Add New</button> &nbsp; or use <b>Update Library</b> to scan the folders you already have.'}</div>`;return}
   drawLib(m,it)
  }catch(e){m.innerHTML=`<div class="empty">${esc(e.message)}</div>`}}
-// ---------- activity: queue + history with clearing ----------
-async function activityView(m){const [q,hs]=await Promise.all([api('queue'),api('history')]);clearTimeout(LPOLL);if(q.length)LPOLL=setTimeout(()=>{if(view=='activity'&&location.hash.startsWith('#/activity')&&$('#chk'))activityView(m)},6000);
+// ---------- Add New (Readarr's add search) ----------
+async function addView(m){const tv=baseType(view);if(T1[tv]&&term&&!addView.set){types={comic:0,ebook:0,audiobook:0};types[tv]=1}addView.set=0;
+ tb([],[{icon:'x',label:'Clear',on:()=>nav('#/add')}]);
+ m.innerHTML=`<div class="addbar"><div class="ai">${I('search')}<input id="aq" type="search" placeholder="eg. Mistborn, Brandon Sanderson, Deadpool, isbn:9780765311788" value="${esc(term)}" autocomplete="off"></div>
+ ${Object.keys(types).map(t=>`<label class="ck"><input type="checkbox" data-t="${t}" ${types[t]?'checked':''}>${TN[t]}</label>`).join('')}<button class="p" id="ago">Search</button></div><div id="ares"></div>`;
+ const run=()=>{const t=$('#aq').value.trim();if(t){addView.set=1;nav('#/add?q='+encodeURIComponent(t))}};$('#ago').onclick=run;$('#aq').onkeydown=e=>{if(e.key=='Enter')run()};
+ m.querySelectorAll('[data-t]').forEach(c=>c.onchange=()=>{types[c.dataset.t]=c.checked?1:0;if(term){addView.set=1;go()}});
+ const o=$('#ares');if(!term){o.innerHTML=`<div class="empty">Search for a book, audiobook or comic to add it.<br><span class="mu">Tip: you can paste an ISBN too.</span></div>`;$('#aq').focus();return}
+ o.innerHTML='<div class="empty">Searching…</div>';
+ const r=await api('lookup?term='+encodeURIComponent(term)+'&types='+Object.keys(types).filter(k=>types[k]).join(','));
+ o.innerHTML=(r.some(x=>x.type=='comic'&&x.provider!='comicvine')?'<div class="note">Comic results are limited without a ComicVine key. Add one in Settings &gt; Metadata to get real series and issue lists.</div>':'')+(r.length?`<p class="mu">${r.length} result${r.length==1?'':'s'} for <b style="color:var(--white)">${esc(term)}</b>. Choose a title to see its details and add it.</p><div class="grid">${r.map(i=>poster(i,i.cover)).join('')}</div>`:'<div class="empty">No matches. Try fewer keywords, or check the metadata keys in Settings.</div>');bindPosters()}
+// ---------- Activity: Queue / History / Blocklist ----------
+async function activityView(m,part){const [q,hs]=await Promise.all([api('queue'),part=='history'?api('history'):Promise.resolve([])]);clearTimeout(LPOLL);
+ if(part=='queue'&&q.length)LPOLL=setTimeout(()=>{if(view=='activity'&&$('#chk'))activityView(m,part)},6000);
  const HF={all:()=>1,sent:x=>x.state=='sent',imported:x=>x.state=='imported',failed:x=>x.state=='failed'},hv=hs.filter(HF[HFILT]);
- m.innerHTML=`<div class="acts"><button class="p" id="chk">Check downloads now</button></div><h3>Downloading now</h3>`+(q.length?'<div class="tw"><table class="cards"><tr><th>Title<th>From<th style="width:32%">Progress<th>Status</tr>'+q.map(x=>`<tr><td class="fi">${x.item_id?`<a class="l" href="#/item/${x.item_id}">${esc(x.title)}</a>`:esc(x.title)}<td>${esc(x.kind)}${x.client!=x.kind?`<small class="mu"> (${esc(x.client)})</small>`:''}<td>${x.progress!=null?pbar(x.progress)+`<small class="mu">${Math.floor(x.progress)}%${x.eta?' · '+esc(x.eta)+' left':''}${x.speed?' · '+esc(x.speed):''}</small>`:'<span class="mu">-</span>'}<td>${esc(x.status)}${x.problem?`<small class="bad">Could not finish: ${esc(x.problem)}</small>`:''}</tr>`).join('')+'</table></div>':'<div class="mu">Nothing downloading.</div>')+
- `<h3>History</h3><div class="bar2"><div class="chips">${[['all','All'],['sent','Downloading'],['imported','Imported'],['failed','Failed']].map(([k,l])=>`<button class="${HFILT==k?'on':''}" data-h="${k}">${l} (${hs.filter(HF[k]).length})</button>`).join('')}</div><span class="sp"></span>${hs.length?'<button class="dg" id="clr">Clear history</button>':''}</div>`+
- (hv.length?'<div class="tw"><table class="cards"><tr><th>Release<th>Type<th>From<th>Status<th>Date<th></tr>'+hv.map(x=>`<tr><td class="fi">${esc(x.title)}<td>${x.type}<td>${esc(KN[x.client_kind]||'-')}<td>${x.state=='sent'?(x.note?'Could not finish':'Downloading'):x.state=='imported'?'Imported':x.state=='failed'?'Failed':esc(x.state)}${x.note?'<small class="mu"> '+esc(x.note)+'</small>':''}<td>${esc(x.created)}<td><button class="x1" title="Remove from history" data-hd="${x.id}">✕</button></tr>`).join('')+'</table></div>':'<div class="mu">No downloads here.</div>');
- $('#chk').onclick=async()=>{toast('Checking downloads…');await send('command/checkdownloads','POST');go()};
- m.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{HFILT=b.dataset.h;activityView(m)});
- m.querySelectorAll('[data-hd]').forEach(b=>b.onclick=async()=>{await send('history/'+b.dataset.hd,'DELETE');activityView(m)});
+ tb([{id:'chk',icon:'refresh',label:'Refresh',title:'Check downloads now'},...(part=='history'?['sep',{id:'clr',icon:'trash',label:'Clear',disabled:!hs.length}]:[])],
+  part=='history'?[{icon:'filter',label:'Filter',cls:HFILT!='all'?'on':'',menu:[['all','All'],['sent','Downloading'],['imported','Imported'],['failed','Failed']].map(([k,l])=>[k,`<span>${l}</span><span class="mu">${hs.filter(HF[k]).length}</span>`]),sel:HFILT,pick:k=>{HFILT=k;activityView(m,part)}}]:[]);
+ m.innerHTML=part=='queue'?(q.length?'<div class="tw"><table class="cards"><tr><th>Title<th>From<th style="width:32%">Progress<th>Status</tr>'+q.map(x=>`<tr><td class="fi">${x.item_id?`<a href="#/item/${x.item_id}">${esc(x.title)}</a>`:esc(x.title)}<td>${esc(x.kind)}${x.client!=x.kind?`<small class="mu"> (${esc(x.client)})</small>`:''}<td>${x.progress!=null?pbar(x.progress)+`<small class="mu">${Math.floor(x.progress)}%${x.eta?' · '+esc(x.eta)+' left':''}${x.speed?' · '+esc(x.speed):''}</small>`:'<span class="mu">-</span>'}<td>${esc(x.status)}${x.problem?`<small class="bad">Could not finish: ${esc(x.problem)}</small>`:''}</tr>`).join('')+'</table></div>':'<div class="empty">Queue is empty</div>')
+ :(hv.length?'<div class="tw"><table class="cards"><tr><th>Release<th>Type<th>From<th>Status<th>Date<th></tr>'+hv.map(x=>`<tr><td class="fi">${esc(x.title)}<td>${x.type}<td>${esc(KN[x.client_kind]||'-')}<td>${x.state=='sent'?(x.note?'Could not finish':'Downloading'):x.state=='imported'?'<span class="pill ok">Imported</span>':x.state=='failed'?'<span class="pill dg">Failed</span>':esc(x.state)}${x.note?'<small class="mu"> '+esc(x.note)+'</small>':''}<td>${esc(x.created)}<td><button class="x1" title="Remove from history" data-hd="${x.id}">✕</button></tr>`).join('')+'</table></div>':'<div class="empty">No history found</div>');
+ $('#chk').onclick=async()=>{toast('Checking downloads…');await send('command/checkdownloads','POST');activityView(m,part)};
+ m.querySelectorAll('[data-hd]').forEach(b=>b.onclick=async()=>{await send('history/'+b.dataset.hd,'DELETE');activityView(m,part)});
  if($('#clr'))$('#clr').onclick=async()=>{const n=await dlg('<b>Clear download history?</b><br><span class="mu">This only clears the list. Your files and library are not touched.</span>',[['Clear finished and failed',''],['Clear finished and failed, and let failed releases be tried again','p'],['Clear everything, including downloads still running','dg']]);if(n<0)return;
   if(n==2&&!confirm('Downloads still running will no longer be imported into your library automatically. Continue?'))return;
-  const r=await send('history?scope='+(n==2?'all':'finished')+'&blocklist='+(n==1?1:0),'DELETE');toast('Cleared '+r.cleared+' entries');activityView(m)}}
+  const r=await send('history?scope='+(n==2?'all':'finished')+'&blocklist='+(n==1?1:0),'DELETE');toast('Cleared '+r.cleared+' entries');activityView(m,part)}}
+async function blocklistView(m){const b=await api('blocklist');
+ tb([{id:'blclr',icon:'trash',label:'Clear',disabled:!b.length,on:async()=>{if(await dlg('Remove everything from the blocklist? Bookarr may grab those releases again.',[['Clear blocklist','dg']])<0)return;await send('blocklist','DELETE');toast('Blocklist cleared');go()}}]);
+ m.innerHTML=`<p class="help">Releases that failed before. Bookarr will not grab these again unless you remove them here.</p>`+(b.length?'<div class="tw"><table class="cards"><tr><th>Release<th>Title<th>Type<th>Date<th></tr>'+b.map((x,n)=>`<tr><td class="fi">${esc(x.title)}${x.note?`<small class="mu">${esc(x.note)}</small>`:''}<td>${x.item_id?`<a href="#/item/${x.item_id}">${esc(x.item_title)}</a>`:'-'}<td>${esc(x.type||'')}<td>${esc(x.created||'')}<td><button class="x1" title="Remove from blocklist" data-bl="${n}">✕</button></tr>`).join('')+'</table></div>':'<div class="empty">Blocklist is empty</div>');
+ m.querySelectorAll('[data-bl]').forEach(x=>x.onclick=async()=>{await send('blocklist?title='+encodeURIComponent(b[x.dataset.bl].title),'DELETE');go()})}
 function stText(i){if(!i.id)return '';if(i.status=='downloaded')return i.file_size==null?'Marked as downloaded, but the file was not found on disk.':'Downloaded: '+(i.path||'').split('/').pop()+' ('+mb(i.file_size)+')';
  return i.status=='wanted'?'Download sent or in progress':i.monitored?'Missing. Bookarr searches for it automatically.':'Not monitored (Bookarr will not download it)'}
 // ---------- details: synopsis + facts ----------
@@ -194,7 +360,7 @@ function details(i){const m=i.meta||{},pills=a=>(a||[]).map(x=>`<span class="pil
  ${row('Publisher',esc(i.publisher))}${row('Published',esc(i.release_date||i.year))}${row('Pages',esc(m.pages))}${row('Issues',esc(m.issues||i.issues))}${row('Length',esc(len))}${row('Edition',esc(m.abridged))}
  ${row('Language',esc(m.language))}${row('ISBN',esc(m.isbn))}${row('Rating',m.rating?'★ '+esc(m.rating)+(m.ratings?' <span class="mu">('+esc(m.ratings)+' ratings)</span>':''):'')}${row('Audience',esc(m.maturity))}
  ${fs.length?row('File types',fs.map(f=>`<span class="pill">${esc(f.ext)} · ${mb(f.size)}</span>`).join(''))+row('Total size',mb(tot)):''}</dl>`}
-function synopsis(t){return t?`<div class="syn ${t.length>600?'cut':''}">${esc(t)}</div>${t.length>600?'<button class="lk" onclick="this.previousElementSibling.classList.remove(\'cut\');this.remove()">Show more</button>':''}`:'<p class="mu">No synopsis yet. Tap Refresh metadata to look again.</p>'}
+function synopsis(t){return t?`<div class="syn ${t.length>600?'cut':''}">${esc(t)}</div>${t.length>600?'<button class="lk" onclick="this.previousElementSibling.classList.remove(\'cut\');this.remove()">Show more</button>':''}`:'<p class="mu">No synopsis yet. Use Refresh to look again.</p>'}
 // ---------- a search result: preview + the simple add buttons ----------
 function addButtons(i){
  if(i.provider=='comicvine')return `<button class="pu" id="a-series">Monitor series (all issues)</button><button class="lk" id="a-manual">Pick a release myself</button>`;
@@ -203,11 +369,11 @@ function addHelp(i){if(i.provider=='comicvine')return '<p class="help"><b>Monito
  return `<p class="help"><b>Search releases</b> adds this ${i.type=='audiobook'?'audiobook':i.type=='comic'?'comic':'book'}, keeps it monitored and downloads the best match into your ${TN[i.type]} folder. If nothing is out yet, Bookarr keeps checking.`+
  (i.author&&i.type!='comic'?` <b>Search + monitor author</b> does the same, then also watches ${esc(i.author.split(',')[0])} and downloads their new ${i.type=='audiobook'?'audiobooks':'books'} when they come out.`:'')+` <b>Pick a release myself</b> adds it and shows the list of downloads so you choose.</p>`}
 function modal(i){const d=document.createElement('div');d.className='ov';let busy=0;
- const draw=()=>{d.innerHTML=`<div class="md"><button class="x">Close</button><div class="mh"><div class="po">${i.cover?`<img src="${esc(i.cover)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc((i.title||'?').slice(0,2))}</span></div>
- <div><h2>${esc(i.title)}</h2>${i.meta?.subtitle?`<p class="mu" style="margin-top:-4px">${esc(i.meta.subtitle)}</p>`:''}<div class="acts">${addButtons(i)}</div>${addHelp(i)}<h3>Synopsis</h3>${synopsis(i.description)}${i._loading?'<p class="mu">Loading more details…</p>':''}${details(i)}</div></div><div id="out"></div></div>`;
+ const draw=()=>{d.innerHTML=`<div class="md"><button class="x">Close</button><div class="mh"><div class="po">${i.cover?`<img src="${esc(i.cover)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc(i.title||'?')}</span></div>
+ <div><h2>${esc(i.title)}</h2>${i.meta?.subtitle?`<p class="mu" style="margin-top:-4px">${esc(i.meta.subtitle)}</p>`:''}<div class="ilabels">${[TN[i.type]?.replace(/s$/,''),i.author,i.year].filter(Boolean).map(x=>`<span class="pill">${esc(x)}</span>`).join('')}</div><div class="acts">${addButtons(i)}</div>${addHelp(i)}<h3>Overview</h3>${synopsis(i.description)}${i._loading?'<p class="mu">Loading more details…</p>':''}<h3>Details</h3>${details(i)}</div></div><div id="out"></div></div>`;
  const q=x=>d.querySelector(x),close=()=>d.remove();q('.x').onclick=close;d.onclick=e=>{if(e.target==d)close()};
  const run=async(mode,btn)=>{if(busy)return;busy=1;btn.disabled=true;const old=btn.textContent;btn.textContent=mode=='series'?'Adding issues…':'Searching…';
-  try{const r=await send('add','POST',{...i,_loading:undefined,mode});
+  try{const r=await send('add','POST',{...i,_loading:undefined,mode});LIB=null;
    if(mode=='series'){toast((r.existing?'Already following ':'Following ')+i.title+': '+r.added+' new issues. Missing ones download automatically.');close();location.hash='#/series/'+r.series_id;return}
    if(mode=='manual'){busy=0;btn.disabled=false;btn.textContent=old;toast('Added and monitored. Pick a release below.');return releases(q('#out'),{...i,id:r.id})}
    let t=(r.existing?'Already in your library. ':'Added. ')+(r.release?'Downloading: '+r.release+'.':r.search_error?'Saved, but the search failed: '+r.search_error:'No release found yet; Bookarr will keep checking.');
@@ -217,18 +383,18 @@ function modal(i){const d=document.createElement('div');d.className='ov';let bus
  if(q('#a-series'))q('#a-series').onclick=e=>run('series',e.target);q('#a-manual').onclick=e=>run('manual',e.target)};
  document.body.appendChild(d);i._loading=1;draw();
  send('lookup/details','POST',{...i,_loading:undefined}).then(r=>{Object.assign(i,r)}).catch(()=>{}).finally(()=>{i._loading=0;if(d.isConnected&&!busy){const o=d.querySelector('#out').innerHTML;draw();d.querySelector('#out').innerHTML=o}})}
-// ---------- release picker ----------
+// ---------- release picker (Readarr "Interactive Search") ----------
 async function releases(o,i){o.innerHTML='<div class="empty">Searching indexers…</div>';const sent=new Set(),term=(i.series&&i.num)?i.series+' '+i.num:i.title;let res;
  try{res=await api('search?term='+encodeURIComponent(term)+'&types='+i.type+'&strict='+STRICT+(i.id?'&item_id='+i.id:''))}catch(e){o.innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
- const peeked={};const H=[['title','Release'],['protocol','Type'],['indexer','Indexer'],['size','Size'],['seeders','Seeds'],['age','Age']],all=res.results;
+ const peeked={};const H=[['title','Release'],['protocol','Source'],['indexer','Indexer'],['size','Size'],['seeders','Peers'],['age','Age']],all=res.results;
  const draw=()=>{const k=RSORT.k,dv=RSORT.d,cnt=p=>all.filter(x=>x.protocol==p).length;
   const r=all.filter(x=>RFILT=='all'||x.protocol==RFILT).sort((a,b)=>{let x=a[k],y=b[k];if(typeof x=='string'||typeof y=='string'){x=(x||'').toLowerCase();y=(y||'').toLowerCase()}else{x=x??-1;y=y??-1}return(x>y?1:x<y?-1:0)*dv});
-  o.innerHTML=`<div class="bar2" style="margin:24px 0 0"><h3 style="margin:0">Releases</h3><span class="sp"></span><button id="relx">✕ Close releases</button></div><p class="help"><b>★ Bookarr would pick this</b> marks what <b>Search releases</b> grabs on its own: a single book over a bundle, then your format order from Settings &gt; Quality (now: ${esc(res.order||'')}), then most seeders. Tap <b>What's inside?</b> to see the actual files before you download.</p><div class="chips"><button data-p="all" class="${RFILT=='all'?'on':''}">All (${all.length})</button><button data-p="torrent" class="${RFILT=='torrent'?'on':''}">Torrents (${cnt('torrent')})</button><button data-p="usenet" class="${RFILT=='usenet'?'on':''}">Usenet (${cnt('usenet')})</button>
+  o.innerHTML=`<div class="bar2" style="margin-top:20px"><h3 style="margin:0;flex:1">Interactive Search</h3><button id="relx">✕ Close</button></div><p class="help"><b>★ Bookarr would pick this</b> marks what <b>Search</b> grabs on its own: a single book over a bundle, then your format order from Settings &gt; Quality (now: ${esc(res.order||'')}), then most seeders. Use <b>What's inside?</b> to see the actual files before you download.</p><div class="chips"><button data-p="all" class="${RFILT=='all'?'on':''}">All (${all.length})</button><button data-p="torrent" class="${RFILT=='torrent'?'on':''}">Torrents (${cnt('torrent')})</button><button data-p="usenet" class="${RFILT=='usenet'?'on':''}">Usenet (${cnt('usenet')})</button>
   <label class="ck"><input type="checkbox" id="strict" ${STRICT?'checked':''}>Exact matches only${res.hidden?' ('+res.hidden+' hidden)':''}</label></div>
   <select class="rsort" id="rs"><option value="score">Best match</option>${H.map(([c,l])=>`<option value="${c}" ${RSORT.k==c?'selected':''}>Sort by ${l.toLowerCase()}</option>`).join('')}</select>
   <div class="rh-wrap"><div class="rr rh">${H.map(([c,l])=>`<span data-k="${c}">${l}${RSORT.k==c?(RSORT.d>0?' ▲':' ▼'):''}</span>`).join('')}<span></span></div>
   ${r.length?r.map(x=>{const n=all.indexOf(x);return `<div class="rr ${x.pick?'pick':''}"><div class="t">${esc(x.title)}<div class="tags">${x.pick?'<span class="pill pk">★ Bookarr would pick this</span>':''}${x.fmt?`<span class="pill">${esc(x.fmt)}</span>`:'<span class="pill mu">format not in name</span>'}${x.pack?'<span class="pill wr">Probably several books</span>':''}${x.skip?`<span class="pill mu">Auto skips: ${esc(x.skip)}</span>`:''}
-   <button class="lk" data-pk="${n}">What's inside?</button>${x.infoUrl?`<a class="l" style="font-size:13px" href="${esc(x.infoUrl)}" target="_blank" rel="noopener">Indexer page</a>`:''}</div><div class="peek" id="pk${n}">${peeked[n]||''}</div></div><span class="c">${x.protocol=='usenet'?'Usenet':'Torrent'}</span><span class="c">${esc(x.indexer)}</span><span class="c">${mb(x.size)}</span><span class="c">${x.protocol=='usenet'?'':(x.seeders??0)+' seeds'}</span><span class="c">${x.age!=null?x.age+'d':''}</span><span class="b"><button data-g="${n}" ${sent.has(n)?'disabled':''}>${sent.has(n)?'Sent ✓':'Download'}</button></span></div>`}).join(''):'<div class="empty">No releases match. Untick "Exact matches only" to see everything the indexers returned.</div>'}</div>`;
+   <button class="lk" data-pk="${n}">What's inside?</button>${x.infoUrl?`<a style="font-size:13px" href="${esc(x.infoUrl)}" target="_blank" rel="noopener">Indexer page</a>`:''}</div><div class="peek" id="pk${n}">${peeked[n]||''}</div></div><span class="c c-${x.protocol}">${x.protocol=='usenet'?'nzb':'torrent'}</span><span class="c">${esc(x.indexer)}</span><span class="c">${mb(x.size)}</span><span class="c">${x.protocol=='usenet'?'':(x.seeders??0)+' seeds'}</span><span class="c">${x.age!=null?x.age+'d':''}</span><span class="b"><button data-g="${n}" ${sent.has(n)?'disabled':''}>${sent.has(n)?'Sent ✓':'Download'}</button></span></div>`}).join(''):'<div class="empty">No releases match. Untick "Exact matches only" to see everything the indexers returned.</div>'}</div>`;
   o.querySelector('#relx').onclick=()=>{o.innerHTML=''};
   o.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{RFILT=b.dataset.p;draw()});
   o.querySelectorAll('[data-pk]').forEach(b=>b.onclick=async()=>{const n=+b.dataset.pk,x=all[n],el=o.querySelector('#pk'+n);
@@ -237,14 +403,14 @@ async function releases(o,i){o.innerHTML='<div class="empty">Searching indexers�
    try{const p=await send('release/peek','POST',{downloadUrl:x.downloadUrl,protocol:x.protocol});
     peeked[n]=(p.summary?`<b>${p.count} file${p.count==1?'':'s'}:</b> ${esc(p.summary)}${p.extras?` <span class="mu">(+${p.extras} repair/info files)</span>`:''}`:'')+(p.message?`<div class="mu">${esc(p.message)}</div>`:'')+
      (p.files.length?'<table>'+p.files.filter(f=>!/\.(par2|nfo|sfv)$/i.test(f.name)).slice(0,25).map(f=>`<tr><td class="fi">${esc(f.name)}<td style="white-space:nowrap">${mb(f.size)}</tr>`).join('')+'</table>':'');
-    el.innerHTML=peeked[n]}catch(e){el.innerHTML=`<span style="color:#f08aa0">${esc(e.message)}</span>`}});
+    el.innerHTML=peeked[n]}catch(e){el.innerHTML=`<span class="bad">${esc(e.message)}</span>`}});
   o.querySelectorAll('[data-k]').forEach(c=>c.onclick=()=>{RSORT=RSORT.k==c.dataset.k?{k:RSORT.k,d:-RSORT.d}:{k:c.dataset.k,d:['title','protocol','indexer'].includes(c.dataset.k)?1:-1};draw()});
   o.querySelector('#rs').onchange=e=>{RSORT={k:e.target.value,d:['title','protocol','indexer'].includes(e.target.value)?1:-1};draw()};
   o.querySelector('#strict').onchange=e=>{STRICT=e.target.checked?1:0;releases(o,i)};
   o.querySelectorAll('[data-g]').forEach(b=>b.onclick=async()=>{const n=+b.dataset.g,x=all[n];b.disabled=true;b.textContent='Sending…';
    try{const r=await send('release','POST',{...x,item_id:i.id});sent.add(n);b.textContent='Sent ✓';toast('Sent to '+r.client+': '+x.title+'. It will land in your '+TN[i.type]+' folder when done.')}catch(e){b.disabled=false;b.textContent='Download';toast('Could not send: '+e.message,1)}})};
  draw();o.scrollIntoView({behavior:'smooth',block:'start'})}
-// ---------- settings ----------
+// ---------- settings (sections live in the sidebar, like Readarr) ----------
 const FORMS={general:[['logLevel','Log level']],indexer:[['prowlarrUrl','Prowlarr URL'],['prowlarrKey','Prowlarr API key']],
  library:[['comic','Comics folder'],['ebook','Ebooks folder'],['audiobook','Audiobooks folder'],['downloads','Downloads folder']],
  media:[['autoSearchMinutes','Search every (minutes)'],['minSeeders','Minimum seeders'],['importMode','Import mode (auto, move, copy, hardlink)'],['downloadSubfolder','Download subfolder for books'],['catComic','Download category for comics'],['catEbook','Download category for ebooks'],['catAudiobook','Download category for audiobooks'],['remotePath','Download path as the client sees it'],['localPath','Same folder as Bookarr sees it']],
@@ -256,28 +422,29 @@ const FORMS={general:[['logLevel','Log level']],indexer:[['prowlarrUrl','Prowlar
  security:[['authMode','Authentication (none or basic)'],['username','Username'],['password','Password']]};
 const PW=new Set(['password','prowlarrKey','transmuteKey','comicvineKey','googleBooksKey','pushoverToken','telegramToken']);
 const NOTES={library:'<p class="note">Downloads stay in your downloads folder while they run. When one finishes, Bookarr moves it into the matching folder below (Comics, Ebooks or Audiobooks inside your Books share) and sorts it by series or author.</p>',
- media:'<p class="note">Bookarr sends each download with its own category (comics, ebooks, audiobooks). With <b>Download subfolder</b> set to <b>Books</b>, your downloads folder ends up with <b>Books/Comics</b>, <b>Books/Ebooks</b> and <b>Books/Audiobooks</b>. After changing these, go to Settings &gt; Download clients and tap <b>Set up folders</b> on each client.</p>',
- email:'<p class="note"><b>Two ways to get books onto a Kindle.</b><br>1. <b>Send to Kindle</b> (email): fill in the boxes below, then tap Send to Kindle on any book. In your Amazon account, add the From address to the "Approved Personal Document E-mail List". Amazon takes EPUB and PDF; Bookarr makes an EPUB first when a book only exists as MOBI/AZW3 (needs the converter).<br>2. <b>Download on the Kindle itself</b>: open the Kindle web browser and go to the Kindle address shown under Settings &gt; Reader devices. Tap a title and it downloads. Bookarr makes an AZW3 copy when needed.</p>',
+ media:'<p class="note">Bookarr sends each download with its own category (comics, ebooks, audiobooks). With <b>Download subfolder</b> set to <b>Books</b>, your downloads folder ends up with <b>Books/Comics</b>, <b>Books/Ebooks</b> and <b>Books/Audiobooks</b>. After changing these, go to Settings &gt; Download Clients and use <b>Set up folders</b> on each client.</p>',
+ email:'<p class="note"><b>Two ways to get books onto a Kindle.</b><br>1. <b>Send to Kindle</b> (email): fill in the boxes below, then use Send to Kindle on any book. In your Amazon account, add the From address to the "Approved Personal Document E-mail List". Amazon takes EPUB and PDF; Bookarr makes an EPUB first when a book only exists as MOBI/AZW3 (needs the converter).<br>2. <b>Download on the Kindle itself</b>: open the Kindle web browser and go to the Kindle address shown under Settings &gt; Reader Devices. Tap a title and it downloads. Bookarr makes an AZW3 copy when needed.</p>',
  converter:'<p class="note">Bookarr uses your <b>Transmute</b> server to turn files into other formats: ebooks (EPUB, AZW3, MOBI, PDF, KEPUB, FB2), comics (CBZ, PDF) and audiobooks (M4B, MP3, M4A). Converted copies are saved next to the original, so both show on the book\'s page.<br>Address: the local one works best, like <b>http://192.168.0.185:3313</b>. API key: in Transmute open Settings &gt; API keys and create one.</p>'};
-const SUBS=[['clients','Download clients'],['indexer','Indexers'],['media','Media'],['quality','Quality'],['metadata','Metadata'],['converter','Converter'],['seerrng','SeerrNG'],['email','Kindle'],['notifications','Notifications'],['library','Library'],['security','Security'],['devices','Reader devices'],['general','General'],['logs','Logs']];
-async function settings(m){m.innerHTML=`<div class="tabs">${SUBS.map(([k,l])=>`<button class="${sub==k?'on':''}" data-s="${k}">${l}</button>`).join('')}</div><div id="out"></div>`;
- document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>nav('#/settings/'+b.dataset.s));const o=$('#out');
- if(sub=='logs'){const l=await api('log');o.innerHTML='<div class="tw"><table>'+l.map(x=>`<tr><td>${esc(x.time)}<td>${x.level}<td class="fi">${esc(x.message)}</tr>`).join('')+'</table></div>';return}
+async function settings(m){m.innerHTML='<div id="out"></div>';const o=$('#out');tb();
  if(sub=='devices')return await devicesView(o);
  if(sub=='seerrng')return await seerrngView(o);
  if(sub=='clients')return await clientsView(o);
  const v=await api('config/'+sub);
+ tb([{id:'tbsave',icon:'save',label:'Save Changes',on:()=>$('#save').click()},
+   ...(sub=='indexer'?['sep',{icon:'refresh',label:'Test',on:()=>$('#ti').click()}]:[]),...(sub=='converter'?['sep',{icon:'refresh',label:'Test',on:()=>$('#tc').click()}]:[]),
+   ...(sub=='library'?['sep',{icon:'refresh',label:'Scan Library',on:()=>$('#scan').click()}]:[]),...(sub=='metadata'?['sep',{icon:'refresh',label:'Refresh Missing',on:()=>$('#rm').click()}]:[]),
+   ...(sub=='notifications'?['sep',{icon:'send',label:'Test',on:()=>$('#tn').click()}]:[])]);
  o.innerHTML=(NOTES[sub]||'')+(sub=='general'?`<div class="f"><span>API key</span><input readonly value="${v.apiKey}"><span>OPDS catalog</span><input readonly value="${location.origin}/opds"></div>`:'')+`<div class="f">${(FORMS[sub]||[]).map(([k,l])=>`<span>${l}</span><input data-k="${k}" ${PW.has(k)?'type=password':''} value="${esc(v[k])}" autocapitalize=off>`).join('')}</div><button class="p" id=save>Save changes</button>
  ${sub=='library'?' <button id=scan>Scan library</button>':''}${sub=='metadata'?' <button id=rm>Refresh missing metadata</button>':''}${sub=='notifications'?' <button id=tn>Send test</button>':''}${sub=='indexer'?' <button id=ti>Save and test</button>':''}${sub=='converter'?' <button id=tc>Save and test</button>':''}<span class="msg" id=msg></span>`;
- $('#save').onclick=async()=>{const b={};document.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=isNaN(i.value)||i.value===''?i.value:+i.value);await send('config/'+sub,'PUT',b);$('#msg').style.color='';$('#msg').textContent='Saved'};
- const tst=async p=>{$('#msg').style.color='';$('#msg').textContent='Checking…';await $('#save').onclick();const r=await send(p,'POST');$('#msg').style.color=r.ok?'var(--te)':'#f08aa0';$('#msg').textContent=(r.ok?'✓ ':'✗ ')+r.message};
+ $('#save').onclick=async()=>{const b={};document.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=isNaN(i.value)||i.value===''?i.value:+i.value);await send('config/'+sub,'PUT',b);$('#msg').style.color='';$('#msg').textContent='Saved';toast('Settings saved')};
+ const tst=async p=>{$('#msg').style.color='';$('#msg').textContent='Checking…';await $('#save').onclick();const r=await send(p,'POST');$('#msg').style.color=r.ok?'var(--ok)':'var(--dang)';$('#msg').textContent=(r.ok?'✓ ':'✗ ')+r.message;toast(r.message,!r.ok)};
  if($('#scan'))$('#scan').onclick=async()=>{const r=await send('library/scan','POST');$('#msg').textContent='Added '+r.added+' items'};
  if($('#ti'))$('#ti').onclick=()=>tst('indexer/test');if($('#tc'))$('#tc').onclick=()=>tst('converter/test');
  if($('#tn'))$('#tn').onclick=async()=>{await $('#save').onclick();await send('notification/test','POST');$('#msg').textContent='Test sent'};
  if($('#rm'))$('#rm').onclick=async()=>{$('#msg').textContent='Working…';const r=await send('metadata/refresh','POST');$('#msg').textContent='Updated '+r.updated+' of '+r.checked}}
 // ---------- Settings > SeerrNG: optional connectors so SeerrNG can send requests to Bookarr ----------
 async function seerrngView(o){const v=await api('config/seerrng'),host=location.hostname,port=location.port||(location.protocol=='https:'?'443':'80'),ssl=location.protocol=='https:';
- const sw=(k,l,d)=>`<label class="ck" style="margin:10px 0;align-items:flex-start"><input type="checkbox" data-sw="${k}" ${+v[k]?'checked':''} style="margin-top:4px"><span><b style="color:var(--tx)">${l}</b><br><span class="mu">${d}</span></span></label>`;
+ const sw=(k,l,d)=>`<label class="ck" style="margin:10px 0;align-items:flex-start;display:flex"><input type="checkbox" data-sw="${k}" ${+v[k]?'checked':''} style="margin-top:4px"><span><b style="color:var(--white)">${l}</b><br><span class="mu">${d}</span></span></label>`;
  const row=(l,val)=>`<span>${l}</span><input readonly value="${esc(val)}" onclick="this.select()">`;
  o.innerHTML=`<p class="note">These let <b>SeerrNG</b> send requests to Bookarr. They are <b>off</b> until you tick them, and turning one off makes Bookarr act exactly as if it were not there.</p>
  ${sw('readarrEnabled','Enable Readarr compatibility (for SeerrNG)','Ebook and audiobook requests. In SeerrNG add Bookarr as a Readarr / Bookshelf server, once for ebooks and once for audiobooks.')}
@@ -289,13 +456,14 @@ async function seerrngView(o){const v=await api('config/seerrng'),host=location.
  <p class="help">If SeerrNG runs on the same server, the local IP (like 192.168.0.185) and port 8787 is the most reliable choice.</p>`;
  o.querySelectorAll('[data-sw]').forEach(c=>c.onchange=async()=>{const b={};o.querySelectorAll('[data-sw]').forEach(x=>b[x.dataset.sw]=x.checked?1:0);
   if(c.dataset.sw=='allowDeleteFiles'&&c.checked&&!confirm('Let SeerrNG delete book files from your drive when you remove something there?')){c.checked=false;return}
-  await send('config/seerrng','PUT',b);$('#msg').style.color='var(--te)';$('#msg').textContent='✓ Saved'})}
+  await send('config/seerrng','PUT',b);$('#msg').style.color='var(--ok)';$('#msg').textContent='✓ Saved'})}
 async function clientsView(o){const c=await api('downloadclient');
+ tb([{icon:'plus',label:'Add Client',on:()=>{$('#n').scrollIntoView({block:'center'});$('#n').focus()}}]);
  o.innerHTML=(c.length?'<div class="tw"><table>'+c.map(x=>`<tr><td>${esc(x.name)}<td>${x.kind}<td>${esc(x.url)}<td id="cs${x.id}" class="mu">Checking…<td style="white-space:nowrap"><button data-t="${x.id}">Test</button> <button data-sf="${x.id}">Set up folders</button> <button data-e="${x.id}">Edit</button> <button class="dg" data-d="${x.id}">Remove</button></tr>`).join('')+'</table></div>':'<div class="empty">No download clients yet.</div>')+
- `<p class="help"><b>Set up folders</b> creates the comics, ebooks and audiobooks categories inside the client so downloads land in <b>downloads/Books/Comics</b>, <b>downloads/Books/Ebooks</b> and <b>downloads/Books/Audiobooks</b> (change the "Books" name under Settings &gt; Media).</p>
+ `<p class="help"><b>Set up folders</b> creates the comics, ebooks and audiobooks categories inside the client so downloads land in <b>downloads/Books/Comics</b>, <b>downloads/Books/Ebooks</b> and <b>downloads/Books/Audiobooks</b> (change the "Books" name under Settings &gt; Media Management).</p>
  <h3 id="fh">Add download client</h3><div class="f"><span>Name</span><input id=n><span>Type</span><select id=k><option>sabnzbd<option>qbittorrent</select><span>URL</span><input id=u placeholder="http://192.168.0.185:8080" inputmode=url autocapitalize=off><span>API key (SABnzbd)</span><input id=a autocapitalize=off><span>Username (qBittorrent)</span><input id=us autocapitalize=off><span>Password (qBittorrent)</span><input id=pw type=password><span>Category</span><input id=c placeholder="leave blank" autocapitalize=off></div>
  <p class="help">Use the local address with the port, like <b>http://192.168.0.185:8080</b>, not a web address behind Cloudflare. Leave Category blank so each type gets its own folder.</p><button class="p" id=add>Add client</button> <button id=tst>Test first</button><div id="res"></div>`;
- const show=(el,r)=>{el.style.color=r.ok?'var(--te)':'#f08aa0';el.textContent=(r.ok?'✓ ':'✗ ')+r.message};
+ const show=(el,r)=>{el.style.color=r.ok?'var(--ok)':'var(--dang)';el.textContent=(r.ok?'✓ ':'✗ ')+r.message};
  c.forEach(x=>api('downloadclient/'+x.id+'/test',{method:'POST'}).then(r=>show($('#cs'+x.id),r)).catch(e=>show($('#cs'+x.id),{ok:0,message:e.message})));
  o.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{const el=$('#cs'+b.dataset.t);el.style.color='';el.textContent='Checking…';api('downloadclient/'+b.dataset.t+'/test',{method:'POST'}).then(r=>show(el,r))});
  o.querySelectorAll('[data-sf]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const r=await send('downloadclient/'+b.dataset.sf+'/setup','POST');await dlg('<b>Folders set up.</b> Each category now saves here:<br><br>'+r.folders.map(esc).join('<br>'),[['OK','p']])}catch(e){toast(e.message,1)}b.disabled=false});
@@ -308,33 +476,41 @@ function closeSearch(){nav('#/'+view)}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-back]');if(!b)return;e.preventDefault();if(history.length>1&&BACKOK)history.back();else nav('#/'+view)});
 let BACKOK=0;addEventListener('hashchange',()=>{BACKOK=1});
 document.addEventListener('keydown',e=>{if(e.key=='Escape'&&!document.querySelector('.ov')&&SELON){e.stopImmediatePropagation();$('#sx')?.click();return}},true);
-document.addEventListener('keydown',e=>{if(e.key=='Escape'&&!document.querySelector('.ov')){if(term&&!/^#\/(item|series)\//.test(location.hash))return closeSearch();const c=document.querySelector('#relx');if(c)c.click()}});
+document.addEventListener('keydown',e=>{if(e.key=='Escape'&&!document.querySelector('.ov')){if(document.body.classList.contains('sbopen'))return closeSidebar();if(term&&!/^#\/(item|series)\//.test(location.hash))return closeSearch();const c=document.querySelector('#relx');if(c)c.click()}});
 document.addEventListener('keydown',e=>{if(e.key=='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){e.preventDefault();$('#q')?.focus()}});
-// ---------- followed authors / series ----------
+// ---------- Authors & Series ----------
 const FSORT=[['title','Name A–Z'],['added','Recently followed'],['wanted','Most still wanted'],['total','Most books'],['latest','Newest release']];
 async function followView(m,t){const s=await api('series?type='+t),sk=store.get('fsort.'+t,'title');
  const f={title:(a,b)=>cmpS(a.title,b.title),added:(a,b)=>cmpS(b.added,a.added),wanted:(a,b)=>b.wanted-a.wanted,total:(a,b)=>b.total-a.total,latest:(a,b)=>cmpS(b.latest||'',a.latest||'')}[sk];
  const canAuthor=t!='comic';REG=[];
- m.innerHTML=`<div class="bar2">${canAuthor?`<input id="fa" placeholder="Author name, e.g. Brandon Sanderson"><button class="pu" id="fab">Follow author</button>`:''}<span class="sp"></span><select id="fs">${FSORT.map(([k,l])=>`<option value="${k}" ${sk==k?'selected':''}>Sort: ${l}</option>`).join('')}</select></div>`+
- (canAuthor?'<p class="help">Following an author lists all their '+(t=='audiobook'?'audiobooks':'books')+' here. By default only <b>new releases</b> download automatically; open an author to download their older books too, or tick just the ones you want.</p>':'<p class="help">To follow a comic series, search for it at the top (with a ComicVine key set) and tap <b>Monitor series</b>.</p>')+
+ tb(canAuthor?[{icon:'userplus',label:'Follow Author',on:()=>$('#fa').focus()}]:[{icon:'plus',label:'Add Series',on:()=>nav('#/add')}],[{icon:'sort',label:'Sort',menu:FSORT,sel:sk,pick:k=>{store.set('fsort.'+t,k);followView(m,t)}}]);
+ m.innerHTML=(canAuthor?`<div class="addbar"><div class="ai">${I('user')}<input id="fa" placeholder="Author name to follow, e.g. Brandon Sanderson"></div><button class="pu" id="fab">Follow author</button></div><p class="help">Following an author lists all their `+(t=='audiobook'?'audiobooks':'books')+' here. By default only <b>new releases</b> download automatically; open an author to download their older books too, or tick just the ones you want.</p>':'<p class="help">To follow a comic series, use <b>Add New</b> (with a ComicVine key set) and choose <b>Monitor series</b>.</p>')+
  (s.length?`<div class="grid">${[...s].sort(f).map(x=>poster({...x,_s:1,_tag:x.provider=='author'?'author':'series',status:x.total&&x.have>=x.total?'downloaded':x.have?'wanted':'missing',_b:x.have+' of '+x.total+' downloaded',_sub:x.wanted?x.wanted+' wanted':(x.provider=='author'?'Following new releases':'')},x.cover||(x.provider=='author'?null:x.cover),1)).join('')}</div>`
- :`<div class="empty">${canAuthor?'You are not following any authors yet. Type a name above, or open a book from a search and tap <b>Search + monitor author</b>.':'No series yet.'}</div>`);
- $('#fs').onchange=e=>{store.set('fsort.'+t,e.target.value);followView(m,t)};
+ :`<div class="empty">${canAuthor?'You are not following any authors yet. Type a name above, or open a book from Add New and choose <b>Search + monitor author</b>.':'No series yet.'}</div>`);
  if($('#fab')){const fa=async()=>{const n=$('#fa').value.trim();if(!n)return;$('#fab').disabled=true;toast('Looking up '+n+'…');try{const r=await send('series','POST',{type:t,title:n,author:n,provider:'author',ext_id:n});toast('Following '+n+': '+r.added+' books listed.');location.hash='#/series/'+r.id}catch(e){toast(e.message,1);$('#fab').disabled=false}};$('#fab').onclick=fa;$('#fa').onkeydown=e=>{if(e.key=='Enter')fa()}}
  bindPosters()}
 async function calView(m){const d=n=>new Date(Date.now()+n*864e5).toISOString().slice(0,10),it=await api(`calendar?start=${d(-14)}&end=${d(90)}`),g={};
- it.forEach(x=>(g[x.release_date]??=[]).push(x));
- m.innerHTML=Object.keys(g).length?Object.keys(g).sort().map(k=>`<h3 class="${k>d(0)?'':'mu'}">${k}</h3><table>${g[k].map(x=>`<tr><td><a class="l" href="#/item/${x.id}">${esc(x.title)}</a><td>${x.type}<td>${x.status}</tr>`).join('')}</table>`).join(''):'<div class="empty">No dated releases yet. Follow a comic series or an author to see upcoming releases here.</div>'}
+ it.forEach(x=>(g[x.release_date]??=[]).push(x));tb([{icon:'refresh',label:'Refresh',on:()=>go()}]);
+ m.innerHTML='<div class="cal">'+(Object.keys(g).length?Object.keys(g).sort().map(k=>`<h3 class="${k==d(0)?'today':k<d(0)?'mu':''}">${new Date(k+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'})}</h3><table>${g[k].map(x=>`<tr><td><a href="#/item/${x.id}">${esc(x.title)}</a><td style="width:120px">${TN[x.type]?.replace(/s$/,'')||x.type}<td style="width:140px"><span class="pill ${x.status=='downloaded'?'ok':x.status=='wanted'?'pri':'dg'}">${x.status=='downloaded'?'Downloaded':x.status=='wanted'?'Downloading':'Missing'}</span></tr>`).join('')}</table>`).join(''):'<div class="empty">No dated releases yet. Follow a comic series or an author to see upcoming releases here.</div>')+'</div>'}
 const fmt=b=>b>1e12?(b/1e12).toFixed(1)+' TB':(b/1e9).toFixed(0)+' GB';
-async function systemView(m){const [i,h,du,bk]=await Promise.all([api('system/info'),api('health'),api('duplicates'),api('system/backup')]);
- m.innerHTML=`<h3>Health</h3><div class="tw"><table>${h.map(x=>`<tr><td style="width:70px;color:${x.ok?'var(--te)':'var(--pu)'}">${x.ok?'OK':'Check'}<td>${esc(x.name)}<td class="mu">${esc(x.message)}</tr>`).join('')}</table></div>
- <h3>Disk space</h3><div class="tw"><table>${i.disks.map(x=>`<tr><td>${esc(x.name)}<td class="mu">${esc(x.path)}<td>${fmt(x.free)} free of ${fmt(x.total)}</tr>`).join('')}</table></div>
- <h3>About</h3><p class="mu">Bookarr ${i.version}, running for ${i.uptime}. ${i.counts.comic} comics, ${i.counts.ebook} ebooks, ${i.counts.audiobook} audiobooks.</p>
- <h3>Backups</h3><div class="acts"><button class="p" id="bk">Create backup</button></div><table>${bk.map(b=>`<tr><td>${esc(b.name)}<td>${(b.size/1024).toFixed(0)} KB<td><a class="l" href="/api/v1/system/backup/${encodeURIComponent(b.name)}?apikey=${KEY}">Download</a></tr>`).join('')}</table>
- <h3>Duplicates</h3>`+(du.length?du.map(g=>`<table>${g.map(x=>`<tr><td>${esc(x.title)}<td class="mu">${esc(x.path)}<td><button class="dg" data-x="${x.id}">Delete file</button></tr>`).join('')}</table><br>`).join(''):'<div class="mu">No duplicates found.</div>');
- $('#bk').onclick=async()=>{await send('system/backup','POST');go()};
- document.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{if(confirm('Delete this file from disk and remove it from Bookarr?')){await send('item/'+b.dataset.x+'?deleteFile=1','DELETE');go()}})}
-async function devicesView(o){const d=await api('device');
+// ---------- System: Status / Tasks / Backup / Duplicates / Log Files ----------
+async function systemView(m,part){tb();
+ if(part=='logs'){const l=await api('log');tb([{icon:'refresh',label:'Refresh',on:()=>go()}]);
+  m.innerHTML=l.length?'<div class="tw"><table><tr><th style="width:110px">Level<th>Message<th style="width:180px">Time</tr>'+l.map(x=>`<tr><td><span class="pill ${x.level=='ERROR'?'dg':x.level=='WARNING'?'wr':''}">${esc(x.level)}</span><td class="fi">${esc(x.message)}<td class="mu">${esc(x.time)}</tr>`).join('')+'</table></div>':'<div class="empty">No log entries yet</div>';return}
+ if(part=='backup'){const bk=await api('system/backup');tb([{id:'bk',icon:'save',label:'Backup Now',on:async()=>{await send('system/backup','POST');toast('Backup created');go()}}]);
+  m.innerHTML='<p class="help">Bookarr makes a backup of its database every week and keeps the last seven. To restore one, stop the container and replace <b>/config/bookarr.db</b> with the file from the zip.</p>'+(bk.length?'<table><tr><th>Name<th>Size<th></tr>'+bk.map(b=>`<tr><td>${esc(b.name)}<td>${(b.size/1024).toFixed(0)} KB<td><a href="/api/v1/system/backup/${encodeURIComponent(b.name)}?apikey=${KEY}">${I('download')} Download</a></tr>`).join('')+'</table>':'<div class="empty">No backups yet</div>');return}
+ if(part=='duplicates'){const du=await api('duplicates');
+  m.innerHTML='<p class="help">Titles that appear more than once in your library.</p>'+(du.length?du.map(g=>`<table>${g.map(x=>`<tr><td><a href="#/item/${x.id}">${esc(x.title)}</a><td class="mu fi">${esc(x.path)}<td style="width:130px"><button class="dg" data-x="${x.id}">Delete file</button></tr>`).join('')}</table><br>`).join(''):'<div class="empty">No duplicates found</div>');
+  m.querySelectorAll('[data-x]').forEach(b=>b.onclick=async()=>{if(confirm('Delete this file from disk and remove it from Bookarr?')){await send('item/'+b.dataset.x+'?deleteFile=1','DELETE');go()}});return}
+ if(part=='tasks'){const T=[['Check downloads','Imports finished downloads into your library','every minute','command/checkdownloads'],['Search for missing','Looks for monitored titles that are not downloaded yet','every hour (Settings > Media Management)',null],
+   ['Scan library','Adds files already in your library folders','when you run it','library/scan'],['Refresh missing metadata','Fills in covers, synopses and details','when you run it','metadata/refresh'],['Refresh followed authors & series','Finds new books and issues','every 12 hours',null],['Backup','Copies Bookarr\'s database','every week','system/backup']];
+  m.innerHTML='<table><tr><th>Task<th>What it does<th>Runs<th></tr>'+T.map((t,n)=>`<tr><td><b style="color:var(--white)">${t[0]}</b><td class="mu">${t[1]}<td>${t[2]}<td style="width:60px">${t[3]?`<button class="x1" title="Run now" data-run="${n}">${I('refresh')}</button>`:''}</tr>`).join('')+'</table>';
+  m.querySelectorAll('[data-run]').forEach(b=>b.onclick=async()=>{const t=T[b.dataset.run];b.disabled=true;toast(t[0]+'…');try{await send(t[3],'POST');toast(t[0]+': done')}catch(e){toast(e.message,1)}b.disabled=false});return}
+ const [i,h]=await Promise.all([api('system/info'),api('health')]);tb([{icon:'refresh',label:'Refresh',on:()=>go()}]);
+ m.innerHTML=`<h3 style="margin-top:0">Health</h3>${h.every(x=>x.ok)?'<p class="mu">No issues with your configuration.</p>':''}<div class="tw"><table>${h.map(x=>`<tr><td style="width:40px;color:${x.ok?'var(--ok)':'var(--warn)'}">${I(x.ok?'check':'warning')}<td style="width:220px">${esc(x.name)}<td class="mu">${esc(x.message)}</tr>`).join('')}</table></div>
+ <h3>Disk Space</h3><div class="tw"><table><tr><th>Location<th>Path<th>Free Space<th style="width:30%">Total</tr>${i.disks.map(x=>`<tr><td>${esc(x.name)}<td class="mu">${esc(x.path)}<td>${fmt(x.free)}<td>${pbar(100-x.free/x.total*100)}<small class="mu">${fmt(x.total)}</small></tr>`).join('')}</table></div>
+ <h3>About</h3><dl class="dt"><dt>Version</dt><dd>${esc(i.version)}</dd><dt>Uptime</dt><dd>${esc(i.uptime)}</dd><dt>Library</dt><dd>${i.counts.comic} comics, ${i.counts.ebook} ebooks, ${i.counts.audiobook} audiobooks</dd><dt>OPDS</dt><dd>${esc(location.origin)}/opds</dd></dl>`}
+async function devicesView(o){const d=await api('device');tb([{icon:'plus',label:'Add Device',on:()=>$('#dn').focus()}]);
  o.innerHTML=`<p class="mu">Give each reading app (or Kindle) its own key so you can revoke one without breaking the others.</p>`+(d.length?'<div class="tw"><table><tr><th>Name<th>Addresses<th>Last used<th></tr>'+d.map(x=>`<tr><td>${esc(x.name)}<td class="fi">OPDS (reading apps): <span class="mu">${location.origin}/opds?apikey=${x.key}</span><br>Kindle web browser: <span class="mu">${location.origin}/kindle?apikey=${x.key}</span><td class="mu">${esc(x.last_used||'never')}<td><button class="dg" data-r="${x.id}">Revoke</button></tr>`).join('')+'</table></div>':'<div class="empty">No devices yet.</div>')+
  `<p class="help"><b>Kindle:</b> on the Kindle open the web browser (Menu &gt; Web Browser), type the Kindle address and bookmark it. Your Kindle must be on the same network as your server, or reach it through your own domain.</p><h3>Add device</h3><div class="f"><span>Name</span><input id=dn placeholder="Kindle Paperwhite"></div><button class="p" id=da>Create key</button>`;
  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=async()=>{await send('device/'+b.dataset.r,'DELETE');go()});
@@ -347,34 +523,45 @@ async function deleteFile(i,path,after){const prim=!i.path||i.path==path,o=prim&
 async function findSeries(o,i){o.innerHTML='<div class="empty">Looking up series…</div>';try{const r=(await api('lookup?term='+encodeURIComponent(i.series||i.title.replace(/\s*#?\d+\s*$/,''))+'&types=comic')).filter(x=>x.provider=='comicvine');
  o.innerHTML=r.length?'<h3>Pick the series to monitor</h3>'+r.map((x,n)=>`<div class="rr2"><div><b>${esc(x.title)}</b><div class="mu">${esc([x.publisher,x.year,x.issues?x.issues+' issues':''].filter(Boolean).join(', '))}</div></div><button class="pu" data-s="${n}">Monitor series</button></div>`).join(''):'<div class="empty">No series found. Check your ComicVine key in Settings &gt; Metadata.</div>';
  o.querySelectorAll('[data-s]').forEach(b=>b.onclick=async()=>{try{const x=await send('series','POST',r[b.dataset.s]);toast('Monitoring '+r[b.dataset.s].title+': '+x.added+' items added.');itemPage(i.id)}catch(e){toast(e.message,1)}})}catch(e){o.innerHTML=`<div class="empty">${esc(e.message)}</div>`}}
-// ---------- a title in your library ----------
+// detail page header with a blurred cover backdrop (Readarr book/author details)
+const dhead=(cover,mon,title,subt,labels,extra)=>`<div class="ihead"><div class="ibg" ${cover?`style="background-image:url('${esc(cover)}')"`:''}></div><div class="iov"></div><div class="ihc"><div class="po ipo">${cover?`<img src="${esc(cover)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc(title)}</span></div>
+ <div class="iinfo"><div class="ititle">${mon}<h1>${esc(title)}</h1></div>${subt?`<div class="isub">${esc(subt)}</div>`:''}<div class="ilabels">${labels}</div>${extra}</div></div></div>`;
+// ---------- a title in your library (Readarr book details) ----------
 let POLL=0;
 async function itemPage(id){clearTimeout(POLL);clearTimeout(LPOLL);const keep=$('#m').dataset.keep;chrome();REG=[];const m=$('#m');if(!keep){m.innerHTML='<div class="empty">Loading…</div>';toTop()}let i,jobs,dl=[];
  try{[i,jobs,dl]=await Promise.all([api('item/'+id),api('convert/jobs?item='+id).catch(()=>[]),api('queue?item='+id).catch(()=>[])])}catch(e){m.innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
  const fs=i.files||[],ok=fs.some(f=>f.exists),s=i.status=='downloaded'&&ok?'have':i.status=='wanted'?'want':'',src=coverUrl(i),fw=i.follow[0],kin=ok&&i.type!='audiobook';
- if(T1[i.type]&&baseType(view)!=i.type){view=i.type;term='';chrome()}const running=jobs.filter(j=>j.state=='running');$('#hd h1').textContent=TN[i.type];
- m.innerHTML=`<p><a class="l" href="#" data-back>&larr; Back</a></p><div class="ip"><div class="po"><img src="${src}" alt="" onerror="this.remove()"><span class="ph">${esc((i.title||'?').slice(0,2))}</span></div>
- <div><h2>${esc(i.title)}</h2>${i.meta.subtitle?`<p class="mu" style="margin-top:-4px">${esc(i.meta.subtitle)}</p>`:''}<p class="mu">${esc([TN[i.type].replace(/s$/,''),i.author,i.series?i.series+(i.num?' #'+i.num:''):'',i.year].filter(Boolean).join(' · '))}</p><p class="sb ${s}">${esc(stText(i))}</p>${dl.map(x=>`<div class="dlbox">${x.progress!=null?pbar(x.progress):''}<div><b>${esc(x.status)}</b>${x.progress!=null&&x.progress<100?` · ${Math.floor(x.progress)}%`:''}${x.eta?' · '+esc(x.eta)+' left':''}${x.speed?' · '+esc(x.speed):''}<span class="mu"> · via ${esc(x.kind)}${x.client!=x.kind?' ('+esc(x.client)+')':''}</span></div>${x.problem?`<div class="bad">It finished downloading, but Bookarr could not move it into your library: ${esc(x.problem)}. Bookarr retries every minute.</div>`:''}</div>`).join('')}
- ${fw?`<p class="mu">${fw.provider=='author'?'Following author':'Part of series'} <a class="l" href="#/series/${fw.id}">${esc(fw.title)}</a></p>`:''}
- <div class="acts"><label class="ck"><input type="checkbox" id="mon" ${i.monitored?'checked':''}>Monitored</label>${i.status=='missing'?'<button class="p" id="auto">Search releases</button>':''}<button id="rel">Pick a release myself</button>
- ${!fw&&i.author&&i.type!='comic'?'<button class="pu" id="fol">Monitor author</button>':''}${i.type=='comic'&&!i.series_id?'<button class="pu" id="findser">Find series</button>':''}<button id="ref">Refresh metadata</button></div>
- ${kin?`<div class="acts"><button id="kindle">Send to Kindle</button><a href="/api/v1/item/${i.id}/kindle?apikey=${KEY}" id="kdl"><button>Download for Kindle</button></a>${i.path&&/\.(cbz|m4b)$/i.test(i.path)?'<button id="tags">Write tags</button>':''}</div>`:''}</div></div>
- <h3>Synopsis</h3>${synopsis(i.description)}<h3>Details</h3>${details(i)}
- <h3>Files</h3>${fs.length?`<div class="tw"><table class="cards"><tr><th>File<th>Format<th>Size<th>Details<th>Added<th></tr>${fs.map((f,n)=>`<tr><td class="fi">${esc(f.name)}<small class="fold">${esc(f.folder)}</small>${f.exists?'':'<small style="color:#f08aa0">Not found on disk</small>'}<td>${esc(f.ext)}${f.primary&&fs.length>1?' <small class="mu">original</small>':''}<td>${mb(f.size)}<td class="mu">${esc(f.info||'')}<td>${esc(f.modified||'-')}<td>${f.exists?`<a class="l" href="/api/v1/item/${i.id}/file?path=${encodeURIComponent(f.path)}&apikey=${KEY}">Download</a> `:''}<button class="dg" data-df="${n}">${f.exists?'Delete':'Clear'}</button>
+ if(T1[i.type]&&baseType(view)!=i.type){view=i.type;term=''}chrome();document.title=i.title+' - Bookarr';const running=jobs.filter(j=>j.state=='running');
+ const tot=fs.filter(f=>f.exists).reduce((a,f)=>a+(f.size||0),0);
+ tb([...(i.status=='missing'?[{id:'auto',icon:'search',label:'Search',title:'Search releases and download the best match'}]:[]),{id:'rel',icon:'user',label:'Interactive Search',title:'Pick a release myself'},'sep',
+   {id:'ref',icon:'refresh',label:'Refresh',title:'Refresh metadata'},...(!fw&&i.author&&i.type!='comic'?[{id:'fol',icon:'userplus',label:'Monitor Author'}]:[]),...(i.type=='comic'&&!i.series_id?[{id:'findser',icon:'series',label:'Find Series'}]:[]),
+   ...(kin?['sep',{id:'kindle',icon:'send',label:'Send to Kindle'},{id:'kdl',icon:'download',label:'Kindle Copy',title:'Download a Kindle-ready copy'}]:[]),...(i.path&&/\.(cbz|m4b)$/i.test(i.path)?[{id:'tags',icon:'tag',label:'Write Tags'}]:[])],
+  [{id:'del',icon:'trash',label:'Delete'}]);
+ const labels=[`<span class="pill">${esc(TN[i.type].replace(/s$/,''))}</span>`,i.author?(fw&&fw.provider=='author'?`<a class="pill" href="#/series/${fw.id}">${esc(i.author)}</a>`:`<span class="pill">${esc(i.author)}</span>`):'',
+  i.series?(fw&&fw.provider!='author'?`<a class="pill" href="#/series/${fw.id}">${esc(i.series+(i.num?' #'+i.num:''))}</a>`:`<span class="pill">${esc(i.series+(i.num?' #'+i.num:''))}</span>`):'',
+  i.release_date||i.year?`<span class="pill">${esc(i.release_date||i.year)}</span>`:'',tot?`<span class="pill">${mb(tot)}</span>`:'',
+  `<span class="pill ${s=='have'?'ok':s=='want'?'pri':i.monitored?'dg':'wr'}">${s=='have'?'Downloaded':s=='want'?'Downloading':i.monitored?'Missing':'Not monitored'}</span>`,
+  i.meta.rating?`<span class="pill">★ ${esc(i.meta.rating)}</span>`:''].join('');
+ const extra=`<p class="sb ${s}">${esc(stText(i))}</p>${dl.map(x=>`<div class="dlbox">${x.progress!=null?pbar(x.progress):''}<div><b>${esc(x.status)}</b>${x.progress!=null&&x.progress<100?` · ${Math.floor(x.progress)}%`:''}${x.eta?' · '+esc(x.eta)+' left':''}${x.speed?' · '+esc(x.speed):''}<span class="mu"> · via ${esc(x.kind)}${x.client!=x.kind?' ('+esc(x.client)+')':''}</span></div>${x.problem?`<div class="bad">It finished downloading, but Bookarr could not move it into your library: ${esc(x.problem)}. Bookarr retries every minute.</div>`:''}</div>`).join('')}
+  ${fw?`<p class="mu">${fw.provider=='author'?'Following author':'Part of series'} <a href="#/series/${fw.id}">${esc(fw.title)}</a></p>`:''}${synopsis(i.description)}`;
+ m.innerHTML=dhead(src,`<button id="mon" class="monbtn ${i.monitored?'on':''}" title="${i.monitored?'Monitored: click to stop monitoring':'Not monitored: click to monitor'}">${I('bookmark')}</button>`,i.title,i.meta.subtitle,labels,extra)+
+ `<h3 style="margin-top:0">Details</h3>${details(i)}
+ <h3>Files</h3>${fs.length?`<div class="tw"><table class="cards"><tr><th>File<th>Format<th>Size<th>Details<th>Added<th></tr>${fs.map((f,n)=>`<tr><td class="fi">${esc(f.name)}<small class="fold">${esc(f.folder)}</small>${f.exists?'':'<small class="bad">Not found on disk</small>'}<td>${esc(f.ext)}${f.primary&&fs.length>1?' <small class="mu">original</small>':''}<td>${mb(f.size)}<td class="mu">${esc(f.info||'')}<td>${esc(f.modified||'-')}<td>${f.exists?`<a href="/api/v1/item/${i.id}/file?path=${encodeURIComponent(f.path)}&apikey=${KEY}">Download</a> `:''}<button class="dg" data-df="${n}">${f.exists?'Delete':'Clear'}</button>
   ${f.exists&&i.convert_to.length?`<div class="cv"><select data-cs="${n}"><option value="">Convert to…</option>${i.convert_to.filter(x=>x!=f.ext.toLowerCase()&&!fs.some(g=>g.exists&&g.ext.toLowerCase()==x&&i.type!='audiobook')).map(x=>`<option value="${x}">${x.toUpperCase()}</option>`).join('')}</select><button data-cv="${n}">Convert</button></div>`:''}</tr>`).join('')}</table></div>`:'<div class="mu">No file yet. It will appear here once a download finishes and is imported.</div>'}
  ${jobs.length?'<div>'+jobs.map(j=>`<p class="sb ${j.state=='done'?'have':j.state=='running'?'want':''}">${esc(j.path.split('/').pop())} → ${j.to.toUpperCase()}: ${esc(j.message)}</p>`).join('')+'</div>':''}
  ${i.convert_to.length&&ok?'<p class="help">Converting uses your Transmute server (Settings &gt; Converter). The new copy is saved next to the original and shows up in this list.</p>':''}
- <div class="bar2" style="margin:24px 0 8px"><h3 style="margin:0">History</h3><span class="sp"></span>${i.history.length?'<button class="dg" id="hclr">Clear history</button>':''}</div>${i.history.length?'<div class="tw"><table class="cards"><tr><th>Release<th>From<th>Status<th>Date<th></tr>'+i.history.map(h=>`<tr><td class="fi">${esc(h.title)}<td>${esc(KN[h.client_kind]||'-')}${h.client_name&&h.client_name!=KN[h.client_kind]?'<small class="mu">'+esc(h.client_name)+'</small>':''}<td>${h.state=='sent'?(h.note?'Could not finish: '+esc(h.note):'Downloading'):h.state=='imported'?'Imported':h.state=='failed'?'Failed'+(h.note?' ('+esc(h.note)+')':''):esc(h.state)}<td>${esc(h.created)}<td><button class="x1" title="Remove from history" data-hd="${h.id}">✕</button></tr>`).join('')+'</table></div>':'<div class="mu">No download history for this title.</div>'}
- <div id="out"></div><h3>Remove</h3><button class="dg" id="del">Remove from Bookarr</button>`;delete m.dataset.keep;
- const q=x=>m.querySelector(x),again=()=>{m.dataset.keep=1;itemPage(i.id)};
+ <h3 style="display:flex;align-items:center">History<span style="flex:1"></span>${i.history.length?'<button class="dg" id="hclr" style="font-size:13px;min-height:30px;padding:3px 12px">Clear history</button>':''}</h3>${i.history.length?'<div class="tw"><table class="cards"><tr><th>Release<th>From<th>Status<th>Date<th></tr>'+i.history.map(h=>`<tr><td class="fi">${esc(h.title)}<td>${esc(KN[h.client_kind]||'-')}${h.client_name&&h.client_name!=KN[h.client_kind]?'<small class="mu">'+esc(h.client_name)+'</small>':''}<td>${h.state=='sent'?(h.note?'Could not finish: '+esc(h.note):'Downloading'):h.state=='imported'?'<span class="pill ok">Imported</span>':h.state=='failed'?'<span class="pill dg">Failed</span>'+(h.note?' '+esc(h.note):''):esc(h.state)}<td>${esc(h.created)}<td><button class="x1" title="Remove from history" data-hd="${h.id}">✕</button></tr>`).join('')+'</table></div>':'<div class="mu">No download history for this title.</div>'}
+ <div id="out"></div>`;delete m.dataset.keep;
+ const q=x=>m.querySelector(x)||$('#tb').querySelector(x),again=()=>{m.dataset.keep=1;itemPage(i.id)};
  if(running.length||dl.length)POLL=setTimeout(()=>{if(location.hash=='#/item/'+i.id)again()},4000);
- q('#mon').onchange=e=>send('item/'+i.id,'PUT',{monitored:e.target.checked?1:0});q('#rel').onclick=()=>releases(q('#out'),i);
- if(q('#auto'))q('#auto').onclick=async e=>{e.target.disabled=true;toast('Searching…');try{await send('item/'+i.id,'PUT',{monitored:1});const r=await send('item/'+i.id+'/search','POST');toast('Downloading: '+r.release);again()}catch(x){e.target.disabled=false;toast(x.message,1)}};
- if(q('#fol'))q('#fol').onclick=async e=>{e.target.disabled=true;const n=i.author.split(',')[0].trim();toast('Looking up '+n+'…');try{const r=await send('series','POST',{type:i.type,title:n,author:n,provider:'author',ext_id:n});toast('Following '+n+': '+r.added+' books listed. New ones download automatically.');again()}catch(x){toast(x.message,1);e.target.disabled=false}};
+ q('#mon').onclick=async()=>{await send('item/'+i.id,'PUT',{monitored:i.monitored?0:1});toast(i.monitored?'No longer monitored':'Monitored. Bookarr will download it when found.');LIB=null;again()};
+ q('#rel').onclick=()=>releases(q('#out'),i);
+ if(q('#auto'))q('#auto').onclick=async e=>{e.currentTarget.disabled=true;toast('Searching…');try{await send('item/'+i.id,'PUT',{monitored:1});const r=await send('item/'+i.id+'/search','POST');toast('Downloading: '+r.release);again()}catch(x){q('#auto').disabled=false;toast(x.message,1)}};
+ if(q('#fol'))q('#fol').onclick=async e=>{e.currentTarget.disabled=true;const n=i.author.split(',')[0].trim();toast('Looking up '+n+'…');try{const r=await send('series','POST',{type:i.type,title:n,author:n,provider:'author',ext_id:n});toast('Following '+n+': '+r.added+' books listed. New ones download automatically.');again()}catch(x){toast(x.message,1);q('#fol').disabled=false}};
  q('#ref').onclick=async()=>{toast('Refreshing…');try{await send('item/'+i.id+'/refresh','POST');again()}catch(e){toast(e.message,1)}};
  if(q('#findser'))q('#findser').onclick=()=>findSeries(q('#out'),i);
- if(q('#kindle'))q('#kindle').onclick=async e=>{e.target.disabled=true;toast('Preparing and sending to Kindle…');try{const r=await send('item/'+i.id+'/send','POST');toast('Sent '+r.file+' to your Kindle. It shows up in a few minutes.')}catch(x){toast(x.message,1)}e.target.disabled=false;again()};
- if(q('#kdl'))q('#kdl').onclick=()=>toast('Getting a Kindle copy ready. If it needs converting this can take a minute.');
+ if(q('#kindle'))q('#kindle').onclick=async e=>{const b=e.currentTarget;b.disabled=true;toast('Preparing and sending to Kindle…');try{const r=await send('item/'+i.id+'/send','POST');toast('Sent '+r.file+' to your Kindle. It shows up in a few minutes.')}catch(x){toast(x.message,1)}b.disabled=false;again()};
+ if(q('#kdl'))q('#kdl').onclick=()=>{toast('Getting a Kindle copy ready. If it needs converting this can take a minute.');location.href='/api/v1/item/'+i.id+'/kindle?apikey='+KEY};
  if(q('#tags'))q('#tags').onclick=async()=>{try{await send('item/'+i.id+'/tags','POST');toast('Tags written')}catch(e){toast(e.message,1)}};
  m.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>deleteFile(i,fs[b.dataset.df].path,again));
  m.querySelectorAll('[data-hd]').forEach(b=>b.onclick=async()=>{await send('history/'+b.dataset.hd,'DELETE');again()});
@@ -383,31 +570,33 @@ async function itemPage(id){clearTimeout(POLL);clearTimeout(LPOLL);const keep=$(
  m.querySelectorAll('[data-cv]').forEach(b=>b.onclick=async()=>{const n=b.dataset.cv,to=m.querySelector(`[data-cs="${n}"]`).value;if(!to)return toast('Pick a format first',1);
   try{await send('item/'+i.id+'/convert','POST',{path:fs[n].path,to});toast('Converting to '+to.toUpperCase()+'…');again()}catch(e){toast(e.message,1)}});
  q('#del').onclick=async()=>{const n=await dlg('Remove <b>'+esc(i.title)+'</b> from Bookarr?',ok?[['Remove and delete the file','dg'],['Remove, keep the file','']]:[['Remove','dg']]);if(n<0)return;
-  try{await send('item/'+i.id+'?deleteFile='+(ok&&n==0?1:0),'DELETE');toast('Removed '+i.title);nav('#/'+i.type)}catch(e){toast(e.message,1)}}}
-// ---------- a followed author or series ----------
+  try{await send('item/'+i.id+'?deleteFile='+(ok&&n==0?1:0),'DELETE');LIB=null;toast('Removed '+i.title);nav('#/'+i.type)}catch(e){toast(e.message,1)}}}
+// ---------- a followed author or series (Readarr author details) ----------
 const SCOL=[['num','#'],['title','Title'],['release_date','Released'],['status','Status']];let SSORT={k:'',d:1};
 async function seriesPage(id){clearTimeout(POLL);clearTimeout(LPOLL);toTop();chrome();REG=[];const m=$('#m');m.innerHTML='<div class="empty">Loading…</div>';let d;
  try{d=await api('series/'+id)}catch(e){m.innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
- const sr=d.series,au=sr.provider=='author',hasNum=d.items.some(x=>x.num);if(view!=sr.type+'-follow'){view=sr.type+'-follow';term='';chrome()}$('#hd h1').textContent=au?'Author':'Series';
+ const sr=d.series,au=sr.provider=='author',hasNum=d.items.some(x=>x.num);if(view!=sr.type+'-follow'){view=sr.type+'-follow';term=''}chrome();document.title=sr.title+' - Bookarr';
+ tb([{id:'ss',icon:'search',label:'Search Wanted'},{id:'sf',icon:'refresh',label:au?'Check New':'Refresh'}],[{id:'sd',icon:'trash',label:au?'Unfollow':'Delete'}]);
  const draw=()=>{let its=[...d.items];if(SSORT.k){const k=SSORT.k;its.sort((a,b)=>(k=='num'?(parseFloat(a.num)||0)-(parseFloat(b.num)||0):k=='status'?(STO[a.status]??3)-(STO[b.status]??3):cmpS(a[k],b[k]))*SSORT.d)}
- m.innerHTML=`<p><a class="l" href="#" data-back>&larr; Back</a></p><div class="ip"><div class="po">${sr.cover?`<img src="${esc(sr.cover)}" alt="" onerror="this.remove()">`:''}<span class="ph">${esc(sr.title.slice(0,2))}</span></div>
- <div><h2>${esc(sr.title)}</h2><p class="mu">${esc([au?'Author':'Series',TN[sr.type],sr.publisher,sr.year,(sr.have||0)+' of '+sr.total+' downloaded',sr.wanted?sr.wanted+' wanted':''].filter(Boolean).join(' · '))}</p>${sr.description?`<div class="syn">${esc(sr.description)}</div>`:''}
- ${au?`<h3>What should download automatically?</h3><div class="mode">${[['future','Only new books that come out from now on'],['all','Every book I do not have yet (the whole back catalogue)'],['none','Nothing. Just list them; I will tick the ones I want']].map(([k,l])=>`<label><input type="radio" name="mm" value="${k}" ${(sr.mon_mode||'future')==k?'checked':''}>${l}</label>`).join('')}</div>`:`<label class="ck"><input type="checkbox" id="sm" ${sr.monitored?'checked':''}>Monitored (download missing issues automatically)</label>`}
- <div class="acts"><button class="p" id="ss">Search wanted now</button><button id="sf">${au?'Check for new books':'Refresh issues'}</button><button class="dg" id="sd">${au?'Stop following':'Remove series'}</button></div></div></div>
- <p class="help">Tick <b>Want</b> on any title to have Bookarr download it, untick to skip it.</p>
- <div class="tw"><table class="cards"><tr><th>Want</th>${SCOL.filter(c=>c[0]!='num'||hasNum).map(([k,l])=>`<th class="sort" data-sk="${k}">${l}${SSORT.k==k?(SSORT.d>0?' ▲':' ▼'):''}</th>`).join('')}<th>File<th></tr>${its.map(x=>{const f=x.path&&x.file_size!=null;return `<tr><td><input type="checkbox" data-w="${x.id}" ${x.monitored||f?'checked':''} ${f?'disabled':''} style="accent-color:var(--pu)">${hasNum?`<td>${esc(x.num||'')}`:''}<td><a class="l" href="#/item/${x.id}">${esc(x.title)}</a><td>${esc(x.release_date||'')}<td>${f?'Downloaded':x.status=='wanted'?'Downloading':x.monitored?'Wanted':'Skipped'}<td>${f?esc(x.path.split('.').pop().toUpperCase())+', '+mb(x.file_size):'-'}<td>${f?`<button class="dg" data-df="${x.id}">Delete file</button>`:''}</tr>`}).join('')}</table></div>`;
- const q=x=>m.querySelector(x);
+ const labels=[au?'Author':'Series',TN[sr.type],sr.publisher,sr.year].filter(Boolean).map(x=>`<span class="pill">${esc(x)}</span>`).join('')+`<span class="pill ${sr.have>=sr.total&&sr.total?'ok':''}">${sr.have||0} of ${sr.total} downloaded</span>`+(sr.wanted?`<span class="pill dg">${sr.wanted} wanted</span>`:'');
+ const ctl=au?`<h3 style="color:#fff;border-color:rgba(255,255,255,.25);font-size:18px">What should download automatically?</h3><div class="mode">${[['future','Only new books that come out from now on'],['all','Every book I do not have yet (the whole back catalogue)'],['none','Nothing. Just list them; I will tick the ones I want']].map(([k,l])=>`<label><input type="radio" name="mm" value="${k}" ${(sr.mon_mode||'future')==k?'checked':''}>${l}</label>`).join('')}</div>`:'';
+ m.innerHTML=dhead(sr.cover,au?'':`<button id="sm" class="monbtn ${sr.monitored?'on':''}" title="${sr.monitored?'Monitored: missing issues download automatically':'Not monitored'}">${I('bookmark')}</button>`,sr.title,'',labels,(sr.description?`<div class="syn">${esc(sr.description)}</div>`:'')+ctl)+
+ `<p class="help">Tick <b>Want</b> on any title to have Bookarr download it, untick to skip it.</p>
+ <div class="tw"><table class="cards"><tr><th>Want</th>${SCOL.filter(c=>c[0]!='num'||hasNum).map(([k,l])=>`<th class="sort" data-sk="${k}">${l}${SSORT.k==k?(SSORT.d>0?' ▲':' ▼'):''}</th>`).join('')}<th>File<th></tr>${its.map(x=>{const f=x.path&&x.file_size!=null;return `<tr><td><input type="checkbox" data-w="${x.id}" ${x.monitored||f?'checked':''} ${f?'disabled':''}>${hasNum?`<td>${esc(x.num||'')}`:''}<td><a href="#/item/${x.id}">${esc(x.title)}</a><td>${esc(x.release_date||'')}<td><span class="pill ${f?'ok':x.status=='wanted'?'pri':x.monitored?'dg':'mu'}">${f?'Downloaded':x.status=='wanted'?'Downloading':x.monitored?'Wanted':'Skipped'}</span><td>${f?esc(x.path.split('.').pop().toUpperCase())+', '+mb(x.file_size):'-'}<td>${f?`<button class="dg" data-df="${x.id}">Delete file</button>`:''}</tr>`}).join('')}</table></div>`;
+ const q=x=>m.querySelector(x)||$('#tb').querySelector(x);
  m.querySelectorAll('[data-sk]').forEach(h=>h.onclick=()=>{SSORT=SSORT.k==h.dataset.sk?{k:SSORT.k,d:-SSORT.d}:{k:h.dataset.sk,d:h.dataset.sk=='release_date'?-1:1};draw()});
  m.querySelectorAll('[data-w]').forEach(c=>c.onchange=async()=>{await send('item/'+c.dataset.w,'PUT',{monitored:c.checked?1:0});const x=d.items.find(y=>y.id==c.dataset.w);x.monitored=c.checked?1:0;draw()});
- m.querySelectorAll('[name=mm]').forEach(r=>r.onchange=async()=>{await send('series/'+sr.id,'PUT',{mon_mode:r.value});toast(r.value=='all'?'Every missing book is now wanted. Tap "Search wanted now" to start.':r.value=='future'?'Only new releases will download.':'Nothing downloads automatically now.');seriesPage(sr.id)});
- if(q('#sm'))q('#sm').onchange=e=>send('series/'+sr.id,'PUT',{monitored:e.target.checked?1:0}).then(()=>seriesPage(sr.id));
- q('#ss').onclick=async e=>{e.target.disabled=true;toast('Searching…');try{const r=await send('series/'+sr.id+'/search','POST');toast('Sent '+r.sent+' downloads')}catch(x){toast(x.message,1)}e.target.disabled=false};
+ m.querySelectorAll('[name=mm]').forEach(r=>r.onchange=async()=>{await send('series/'+sr.id,'PUT',{mon_mode:r.value});toast(r.value=='all'?'Every missing book is now wanted. Use "Search Wanted" to start.':r.value=='future'?'Only new releases will download.':'Nothing downloads automatically now.');seriesPage(sr.id)});
+ if(q('#sm'))q('#sm').onclick=()=>send('series/'+sr.id,'PUT',{monitored:sr.monitored?0:1}).then(()=>{toast(sr.monitored?'Series no longer monitored':'Series monitored');seriesPage(sr.id)});
+ q('#ss').onclick=async e=>{const b=e.currentTarget;b.disabled=true;toast('Searching…');try{const r=await send('series/'+sr.id+'/search','POST');toast('Sent '+r.sent+' downloads')}catch(x){toast(x.message,1)}b.disabled=false};
  q('#sf').onclick=async()=>{toast('Checking…');try{const r=await send('series/'+sr.id+'/refresh','POST');toast(r.added+' new titles');seriesPage(sr.id)}catch(e){toast(e.message,1)}};
  m.querySelectorAll('[data-df]').forEach(b=>b.onclick=()=>{const x=d.items.find(y=>y.id==b.dataset.df);deleteFile(x,x.path,()=>seriesPage(sr.id))});
  q('#sd').onclick=async()=>{const n=await dlg(au?'Stop following <b>'+esc(sr.title)+'</b>? Books you downloaded or ticked stay in your library.':'Remove <b>'+esc(sr.title)+'</b>? Downloaded files stay on disk.',[[au?'Stop following':'Remove series','dg']]);if(n<0)return;await send('series/'+sr.id,'DELETE');toast(au?'No longer following '+sr.title:'Series removed');nav('#/'+sr.type+'-follow')}};
  draw()}
-function route(){const h=location.hash,m=h.match(/^#\/(item|series)\/(\d+)/);if(m)return m[1]=='item'?itemPage(+m[2]):seriesPage(+m[2]);
- const r=h.match(/^#\/([\w-]+)(?:\/([\w-]+))?(?:\?q=(.*))?$/);view=r&&TITLE[r[1]]?r[1]:'main';if(view=='settings'&&r[2]&&SUBS.some(x=>x[0]==r[2]))sub=r[2];
+function route(){closeSidebar();const h=location.hash,m=h.match(/^#\/(item|series)\/(\d+)/);if(m)return m[1]=='item'?itemPage(+m[2]):seriesPage(+m[2]);
+ const r=h.match(/^#\/([\w-]+)(?:\/([\w-]+))?(?:\?q=(.*))?$/);view=r&&TITLE[r[1]]?r[1]:'main';
+ if(view=='settings'){if(r[2]=='logs'){view='system';sysPart='logs'}else sub=r[2]&&(SUBS.some(x=>x[0]==r[2])||r[2]=='clients')?r[2]:SUBS[0][0]}
+ if(view=='system'&&!(r[2]=='logs'&&sysPart=='logs'))sysPart=r[2]&&SYS.some(x=>x[0]==r[2])?r[2]:(r[1]=='settings'?'logs':'status');
  term=r&&r[3]?decodeURIComponent(r[3]):'';toTop();go()}
-addEventListener('hashchange',route);route();
+initHeader();addEventListener('hashchange',route);route();
 </script></body></html>

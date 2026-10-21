@@ -337,6 +337,19 @@ def item_history_clear(iid: int, scope: str = "finished"):
     db.commit(); return {"cleared": n}
 @app.delete("/api/v1/history/{gid}", dependencies=API)
 def history_del(gid: int): db.execute("DELETE FROM grab WHERE id=?", (gid,)); db.commit(); return {}
+@app.get("/api/v1/blocklist", dependencies=API)
+def blocklist_list():
+    """Releases Bookarr will not grab again (they failed before), with the title they were for when known."""
+    out = []
+    for b in rows("SELECT title FROM blocklist ORDER BY title"):
+        g = rows("SELECT g.type, g.created, g.note, g.protocol, i.id item_id, i.title item_title FROM grab g LEFT JOIN item i ON i.id=g.item_id WHERE g.title=? ORDER BY g.id DESC LIMIT 1", (b["title"],))
+        out.append({"title": b["title"], **(g[0] if g else {})})
+    return out
+@app.delete("/api/v1/blocklist", dependencies=API)
+def blocklist_remove(title: str = None):
+    """Remove one release from the blocklist (title=...), or all of them when no title is given."""
+    n = db.execute("DELETE FROM blocklist" + (" WHERE title=?" if title else ""), (title,) if title else ()).rowcount
+    db.commit(); return {"removed": n}
 @app.post("/api/v1/command/checkdownloads", dependencies=API)
 async def cmd_check(): await check_downloads(); return {"ok": True}
 
